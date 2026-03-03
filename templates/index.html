@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ePrice 查詢工具</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f1419;
+      --card: #1a2332;
+      --border: #2d3a4d;
+      --text: #e6edf3;
+      --muted: #8b9eb0;
+      --accent: #58a6ff;
+      --success: #3fb950;
+      --error: #f85149;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 700px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 1.35rem;
+      font-weight: 700;
+      text-align: center;
+      color: var(--text);
+    }
+
+    .field {
+      margin-bottom: 1.25rem;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 0.35rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .field input {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      font-size: 1rem;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .field input:focus {
+      border-color: var(--accent);
+    }
+
+    .field input::placeholder {
+      color: var(--muted);
+    }
+
+    .btn {
+      width: 100%;
+      margin-top: 0.5rem;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: inherit;
+      color: #fff;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.05s;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .result {
+      margin-top: 1.5rem;
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      display: none;
+    }
+
+    .result.visible {
+      display: block;
+    }
+
+    .result.success {
+      background: rgba(63, 185, 80, 0.15);
+      border: 1px solid rgba(63, 185, 80, 0.4);
+      color: var(--success);
+    }
+
+    .result.error {
+      background: rgba(248, 81, 73, 0.12);
+      border: 1px solid rgba(248, 81, 73, 0.35);
+      color: var(--error);
+    }
+
+    .result .label {
+      color: var(--muted);
+      margin-right: 0.5rem;
+    }
+
+    .result .value {
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .result-list {
+      margin-top: 0.75rem;
+      max-height: 320px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+    }
+
+    .result-list table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .result-list th, .result-list td {
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .result-list th {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .result-list tr:last-child td {
+      border-bottom: none;
+    }
+
+    .result-count {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+
+    .loading {
+      text-align: center;
+      color: var(--muted);
+      margin-top: 1rem;
+      display: none;
+    }
+
+    .loading.visible {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>ePrice 查詢工具</h1>
+
+    <form id="form">
+      <div class="field">
+        <label for="username">User Name</label>
+        <input type="text" id="username" name="username" placeholder="請輸入帳號" required />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="請輸入密碼" required />
+      </div>
+      <div class="field">
+        <label for="product_name">Product Name</label>
+        <input type="text" id="product_name" name="product_name" placeholder="請輸入產品名稱" required />
+      </div>
+      <div class="field">
+        <label for="period_start">Cost(Highest) 起始時間 <span style="color:var(--muted);font-size:0.82rem;">（格式 YYYYMM，例如 202501）</span></label>
+        <input type="text" id="period_start" name="period_start" value="202501" placeholder="202501" maxlength="6" style="width:120px;" />
+      </div>
+      <div class="field">
+        <label for="selling_price">Selling Price <span style="color:var(--muted);font-size:0.82rem;">（選填；修改後立即重算 E2E%，無需重新查詢）</span></label>
+        <div style="display:flex;gap:0.5rem;">
+          <input type="number" id="selling_price" name="selling_price" placeholder="例如 100.00" step="any" min="0" style="flex:1;" />
+          <select id="sell_currency" style="width:80px;padding:0.65rem 0.5rem;font-size:1rem;font-family:inherit;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:8px;outline:none;">
+            <option value="USD">USD</option>
+            <option value="NTD">NTD</option>
+            <option value="RMB">RMB</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>匯率設定 <span style="color:var(--muted);font-size:0.82rem;">（E2E% 統一換算為台幣後計算）</span></label>
+        <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+          <span style="color:var(--muted);font-size:0.9rem;">1 USD =</span>
+          <input type="number" id="usd_rate" value="32" step="any" min="0" style="width:80px;padding:0.5rem 0.6rem;font-size:0.95rem;font-family:inherit;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:8px;outline:none;" />
+          <span style="color:var(--muted);font-size:0.9rem;">NTD</span>
+          <span style="color:var(--muted);font-size:0.9rem;margin-left:0.5rem;">1 RMB =</span>
+          <input type="number" id="rmb_rate" value="4.4" step="any" min="0" style="width:80px;padding:0.5rem 0.6rem;font-size:0.95rem;font-family:inherit;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:8px;outline:none;" />
+          <span style="color:var(--muted);font-size:0.9rem;">NTD</span>
+        </div>
+      </div>
+      <button type="submit" class="btn" id="btnSubmit">查詢 Base Price</button>
+    </form>
+
+    <p class="loading" id="loading">查詢中…</p>
+
+    <div class="result" id="result"></div>
+    <div class="result-list" id="resultList" style="display: none;"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById("form");
+    const btnSubmit = document.getElementById("btnSubmit");
+    const loading = document.getElementById("loading");
+    const resultEl = document.getElementById("result");
+    let currentProducts = [];
+
+    function showLoading(show) {
+      loading.classList.toggle("visible", show);
+      btnSubmit.disabled = show;
+    }
+
+    function parseNumeric(s) {
+      if (!s && s !== 0) return null;
+      const m = (s + "").replace(/,/g, "").match(/[\d]+\.?\d*/);
+      return m ? parseFloat(m[0]) : null;
+    }
+
+    function extractCurrency(s) {
+      if (!s) return "";
+      const m = (s + "").match(/\b([A-Z]{2,4})\b/);
+      return m ? m[1] : "";
+    }
+
+    function toNTD(value, currency, usdRate, rmbRate) {
+      const cur = (currency || "").toUpperCase();
+      if (cur === "USD") return value * usdRate;
+      if (cur === "RMB" || cur === "CNY") return value * rmbRate;
+      return value;
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement("div");
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function renderResults() {
+      const listEl = document.getElementById("resultList");
+      if (!currentProducts.length) return;
+
+      const sellingPrice = parseNumeric(document.getElementById("selling_price").value);
+      const selCurrency = document.getElementById("sell_currency").value;
+      const usdRate = parseNumeric(document.getElementById("usd_rate").value) || 1;
+      const rmbRate = parseNumeric(document.getElementById("rmb_rate").value) || 1;
+
+      resultEl.className = "result visible success";
+      resultEl.innerHTML = "<span class=\"label\">共 </span><span class=\"value\">" + currentProducts.length + "</span><span class=\"label\"> 筆</span>";
+      listEl.style.display = "block";
+      listEl.innerHTML = "<table><thead><tr>" +
+        "<th>Product Number / Name / Spec</th><th>Currency</th><th>Base Price</th><th>Cost (Lowest)</th>" +
+        "<th>Cost (Highest)</th><th>Selling Price</th><th>E2E% (NTD基準)</th></tr></thead><tbody>" +
+        currentProducts.map(function(p) {
+          const cur = p.currency || "-";
+          const cost = p.cost_lowest || "-";
+          const bpCur = p.currency ? " (" + p.currency + ")" : "";
+
+          // 依目前匯率將每筆 (cost, currency) 換算 NTD 取最大
+          var bestCostVal = null, bestCostCur = "", costHLabel = "-";
+          var entries = p.cost_highest_entries || [];
+          if (entries.length) {
+            var bestNTD = null;
+            for (var ei = 0; ei < entries.length; ei++) {
+              var ev = entries[ei].cost;
+              var ec = entries[ei].currency || "";
+              var ntdV = toNTD(ev, ec, usdRate, rmbRate);
+              if (bestNTD === null || ntdV > bestNTD) {
+                bestNTD = ntdV;
+                bestCostVal = ev;
+                bestCostCur = ec;
+              }
+            }
+            if (bestCostVal !== null) {
+              costHLabel = bestCostVal.toFixed(2) + (bestCostCur ? " (" + bestCostCur + ")" : "");
+            }
+          }
+
+          let spDisplay = "-";
+          let e2eDisplay = "-";
+          if (sellingPrice !== null && sellingPrice > 0) {
+            spDisplay = sellingPrice.toFixed(2) + " " + selCurrency;
+            if (bestCostVal !== null) {
+              const spNTD = toNTD(sellingPrice, selCurrency, usdRate, rmbRate);
+              const costNTD = toNTD(bestCostVal, bestCostCur, usdRate, rmbRate);
+              if (spNTD > 0) {
+                const e2e = (spNTD - costNTD) / spNTD * 100;
+                e2eDisplay = e2e.toFixed(1) + "%";
+              }
+            }
+          }
+          return "<tr><td>" + escapeHtml(p.product_number_name_spec) +
+                 "</td><td>" + escapeHtml(cur) +
+                 "</td><td>" + escapeHtml(p.base_price) + escapeHtml(bpCur) +
+                 "</td><td>" + escapeHtml(cost) +
+                 "</td><td>" + escapeHtml(costHLabel) +
+                 "</td><td>" + escapeHtml(spDisplay) +
+                 "</td><td>" + escapeHtml(e2eDisplay) + "</td></tr>";
+        }).join("") + "</tbody></table>";
+    }
+
+    // 即時重算：任何計算相關欄位改變都立即更新
+    ["selling_price", "sell_currency", "usd_rate", "rmb_rate"].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el.tagName === "SELECT") el.addEventListener("change", renderResults);
+      else el.addEventListener("input", renderResults);
+    });
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const product_name = document.getElementById("product_name").value.trim();
+      const period_start = document.getElementById("period_start").value.trim() || "202501";
+
+      if (!username || !password || !product_name) {
+        resultEl.className = "result visible error";
+        resultEl.textContent = "請填寫 User Name、Password 與 Product Name。";
+        return;
+      }
+
+      showLoading(true);
+      resultEl.classList.remove("visible");
+      document.getElementById("resultList").style.display = "none";
+      currentProducts = [];
+
+      try {
+        const res = await fetch("/api/query", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password, product_name, period_start }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          currentProducts = data.products || [];
+          renderResults();
+        } else {
+          resultEl.className = "result visible error";
+          resultEl.textContent = data.error || "查詢失敗";
+          document.getElementById("resultList").style.display = "none";
+        }
+      } catch (err) {
+        resultEl.className = "result visible error";
+        resultEl.textContent = "連線錯誤：" + (err.message || "請確認後端已啟動");
+      } finally {
+        showLoading(false);
+      }
+    });
+  </script>
+</body>
+</html>

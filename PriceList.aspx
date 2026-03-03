@@ -1,0 +1,1256 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head><meta http-equiv="X-UA-Compatible" content="IE=8,IE=9,IE=10,chrome=1,ff=3" /><meta http-equiv="Pragma" content="no-cache" /><meta http-equiv="pragma" content="no-cache" /><meta http-equiv="cache-control" content="no-cache, must-revalidate" /><meta http-equiv="expires" content="0" /><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /><title>
+	Price
+</title><link href="../Styles/custom.css" rel="stylesheet" type="text/css" /><link href="../Styles/Site.css" rel="stylesheet" type="text/css" /><script language ="javascript" src ='/Scripts/jquery-1.8.3.min.js' type ="text/javascript"></script><script language ="javascript" src ='/Menu/menu.js' type ="text/javascript"></script><link type="text/css" href="../Menu/menu.css" rel="stylesheet" />
+    <script language="javascript" src="../Scripts/jquery.validate.min.js" type="text/javascript"></script>
+    <script language="javascript" src="../Scripts/jquery.tablesorter.min.js" type="text/javascript"></script>
+    <script language="javascript" src="../Scripts/jquery-ui-1.9.2.custom.min.js" type="text/javascript"></script>
+    <script language="javascript" src="../Scripts/jquery.multiselect.min.js" type="text/javascript"></script>
+    <script language="javascript" src="../Scripts/jquery.multiselect.filter.js" type="text/javascript"></script>
+    <link href="../Styles/ui-lightness/jquery-ui-1.9.2.custom.min.css" rel="stylesheet"
+        type="text/css" />
+    <link href="../Styles/jquery.multiselect.css" rel="stylesheet" type="text/css" />
+    <link href="../Styles/jquery.multiselect.filter.css" rel="stylesheet" type="text/css" />
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $("#MainContent_gv").tablesorter({
+                headers: {
+                    0: { sorter: false }
+                }
+            });
+
+            $("#MainContent_lb_ProductGroup").multiselect({
+                noneSelectedText: "Select groups",
+                selectedList: 10 // 0-based index
+            }).multiselectfilter();
+
+            $("input:checkbox:checked").each(function () {
+                var id = $(this).attr('id').split("_")[2];
+                var tb = "#MainContent_TextBox_" + id;
+                var ddl = "#MainContent_DropDownList_" + id;
+                $(tb).removeAttr("disabled");
+                $(ddl).removeAttr("disabled");
+            });
+
+            $("input:checkbox").click(function () {
+                var id = $(this).attr('id').split("_")[2];
+                var tb = "#MainContent_TextBox_" + id;
+                var ddl = "#MainContent_DropDownList_" + id;
+                if ($(this).attr("checked")) {
+                    $(tb).removeAttr("disabled");
+                    $(ddl).removeAttr("disabled");
+                }
+                else {
+                    $(tb).attr("disabled", true);
+                    $(ddl).attr("disabled", true);
+                }
+            });
+
+            $("#form").validate({});
+
+            // Discount Rate
+            $.validator.addMethod("discountRate_required", function (value, element) {
+                return ($('input:checkbox:checked').length > 0) ? true : false;
+            }, 'This field is required.');
+
+            // Date Range
+            $.validator.addMethod("daterange", function (value, element) {
+                var startDate = Date.parse($("#MainContent_txt_startingDate").val());
+                var endDate = Date.parse($("#MainContent_txt_endingDate").val());
+                if (!isNaN(startDate) && !isNaN(endDate)) {
+                    return endDate > startDate;
+                }
+                return true;
+
+            }, "Please specify starting date bigger than ending date.");
+        });
+
+        function chkall(input) {
+            $("#MainContent_gv input[type=checkbox]").attr("checked", input.checked);
+        }
+
+        function ClearSearch() {
+            $("#MainContent_lb_ProductGroup").multiselect("uncheckAll");
+            $("input[type=text]").val('');
+            if ($('select option').length > 0) {
+                $('select option:first').attr('selected', 'selected');
+            }
+        }
+    </script>
+    <style type="text/css">
+        /************jQuery.Validate插件样式开始********************/
+        label.error
+        {
+            color: Red;
+            padding-left: 20px;
+        }
+        /************jQuery.Validate插件样式结束********************/
+    </style>
+    <style type="text/css">
+        th.header
+        {
+            background-image: url(../img/small.gif);
+            cursor: pointer;
+            font-weight: bold;
+            background-repeat: no-repeat;
+            background-position: center left;
+            border-right: 1px solid #dad9c7;
+            margin-left: -1px;
+        }
+        th.headerSortUp
+        {
+            background-image: url(../images/asc.gif);
+            background-position: bottom center;
+            background-repeat: no-repeat;
+        }
+        th.headerSortDown
+        {
+            background-image: url(../images/desc.gif);
+            background-position: bottom center;
+            background-repeat: no-repeat;
+        }
+        .style2
+        {
+            width: 433px;
+        }
+        .style3
+        {
+            height: 29px;
+            width: 433px;
+        }
+        .style4
+        {
+            width: 803px;
+        }
+        .style5
+        {
+            height: 29px;
+            width: 850px;
+        }
+    </style>
+<link href="/WebResource.axd?d=lID8Ac0OYmeET_1tyWp9TMjuMRpcsdcyesLlNBEyALtH45knQsNnCNNVouif3xtmHdIkcr2osWFSxMe2BneayRko_YK3fzEdr8PCXgRH8_VuHx8JifwpRb_smkAEY68wXk8r7VG2MZmdVXr0Q84HDg2&amp;t=635082715873431266" type="text/css" rel="stylesheet" /></head>
+<body>
+    <form method="post" action="./PriceList.aspx" id="form">
+<div class="aspNetHidden">
+<input type="hidden" name="MainContent_ToolkitScriptManager_HiddenField" id="MainContent_ToolkitScriptManager_HiddenField" value="" />
+<input type="hidden" name="__EVENTTARGET" id="__EVENTTARGET" value="" />
+<input type="hidden" name="__EVENTARGUMENT" id="__EVENTARGUMENT" value="" />
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="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" />
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+var theForm = document.forms['form'];
+if (!theForm) {
+    theForm = document.form;
+}
+function __doPostBack(eventTarget, eventArgument) {
+    if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
+        theForm.__EVENTTARGET.value = eventTarget;
+        theForm.__EVENTARGUMENT.value = eventArgument;
+        theForm.submit();
+    }
+}
+//]]>
+</script>
+
+
+<script src="/WebResource.axd?d=twoPA8CXKKa2kKaCG7DfY94WVdz_a7pvrtc0duwYCbbQbZTvYDdqJmIR1ur2-GAMPRzNFXQSEE0v_nxKbeySlTQNpRL9lrAys4WQa6X7w2E1&amp;t=638901824248157332" type="text/javascript"></script>
+
+
+<script src="/ScriptResource.axd?d=EBIpt1j3hd8q27a0OVGrXdq7soVRqMPmWrIXUsgPjOHnKzkUDdWmwd2tjQXwPvLfKM_vHGRBLNcRJqTWfbZUrLvr8Aq2wPnA5Do1lspMG44w72t2pRGOtRLEaerqF1fXXwWSAdScpIsvikFZcrRilQ2&amp;t=ffffffffaa73f696" type="text/javascript"></script>
+<script type="text/javascript">
+//<![CDATA[
+if (typeof(Sys) === 'undefined') throw new Error('ASP.NET Ajax client-side framework failed to load.');
+//]]>
+</script>
+
+<script src="/ScriptResource.axd?d=NQa_md5K42GZGilL9q1ZmZyBhQqjPnOzkioaA8lWu17GYMJ-ExMNGzdiTO-Ijq83ewcwlhNccJpN4Yz-v_ug_J_uSl73-XDruTwb7Z2-2P89HGHCftdbi_-kyK_I2NAPQ8VI9243INlNsTR-AIYTyg2&amp;t=ffffffffaa73f696" type="text/javascript"></script>
+<script src="/Price/PriceList.aspx?_TSM_HiddenField_=MainContent_ToolkitScriptManager_HiddenField&amp;_TSM_CombinedScripts_=%3b%3bAjaxControlToolkit%2c+Version%3d4.1.60501.0%2c+Culture%3dneutral%2c+PublicKeyToken%3d28f01b0e84b6d53e%3aen-US%3a5c09f731-4796-4c62-944b-da90522e2541%3a475a4ef5%3aaddc6819%3a5546a2b%3ad2e10b12%3aeffe2a26%3a37e2e5c9%3a5a682656%3ac7029a2%3ae9e598a9" type="text/javascript"></script>
+<div class="aspNetHidden">
+
+	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="0F9F380E" />
+	<input type="hidden" name="__VIEWSTATEENCRYPTED" id="__VIEWSTATEENCRYPTED" value="" />
+	<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="q3Ve4iZigakgOHMRUX5KIyL93w8xgAiK3cllSmW+peWRm6pz9dGrJEVDa3QpCu+bPRuToB8ENUFFbYfBl5AnhZrFPLtrl8/RLj0G5UEO6z0PymNWEmhJf3QUVDOjCNMnK8EpvukTgBPzmTGqWGuiTLQYyB7mRqHDfX/UHz9656akq+kGnSe5pWusiDBOnnp8EQ7ZRHRO4/jnINfk/aPhB9eHUTdkGon1HmYItKHbGzCFAeSqwo/k9Vd36CrW/c/6/Cvgy2Nb3hwoNcPt5/tF3wEvquniTK8lMFzWZrtLrcZ92sX2egVOS3RKLZzI7MtTiosMyrDUJesq+p4Mk0uHSpD1UOgmf/z/D2LH5gRq46dUjU6dejEHRFk4Gc+U2S7+nmejt3/mudAmawGD2qkoBAq6ZZ03MPOswPai7RtjmLoz6nQBsOIRTK+xEeJVS8MLtfTqb/QdfW8WEMiMFVeWsf+ftzO064S81RN+5OdYWpTgQ/t7b7U4VrmMRV/gG+Yxe8KbzbxJHQfifxIdwqP69UHmFl5rG1fBujkPs5FU47FDmMgOACmZZMrkaGtfueKPatRe39T/1QaReR0JFRvieg==" />
+</div>
+        <div class="page">
+            <div class="header_wrapper">
+                <div class="banner">
+                    <div class="loginDisplay" style="padding-bottom: 20px; float: right">
+                        <span id="Lb_Username">User：vincentsj.chiu</span>
+                        <a id="HL_Logout" href="../Logout.aspx" style="color:Black;">[Logout]</a>
+                        <br />
+                        Login Time：2/3/2026 6:20:52 PM
+                        <br />
+
+                        
+                    </div>
+                    <div style="margin-left: 326px">
+                        <img src='/img/header.gif' border="0">
+                    </div>
+                </div>
+                
+                <div class="title">
+                    
+                </div>
+                <div id="menu" style="min-width: 800px">
+                    <ul class="menu">
+                        <li><a href='/Default.aspx'><span>HOME</span></a>
+                            <li><a href="#" class="parent"><span>Price List</span></a>
+                                <ul>
+                                    <li><a href='/Price/PriceList.aspx'><span>View RBU Price Book(PS/PM)</span></a></li><li><a href='/Price/RBUPriceList.aspx'><span>View RBU Price Book(RBU/PMM)</span></a></li><li><a href='/Price/ViewOEM_ODM(Local).aspx'><span>View DirectSell & ODM</span></a></li>
+                                    <li><a href='/UserData/ExchangeRate.aspx'><span>Exchange Rate</span></a></li>
+                                    
+                                </ul>
+                            </li>
+                            <li><a href='#' class='parent'><span>PS/PM</span></a>
+                                <ul>
+                                    <li><a href='/Price/AddPrice.aspx'><span>Set RBU Price</span></a></li><li><a href='/Approve/RbuPriceRejectList.aspx'><span>Adjust reject RBU price</span></a></li><li><a href='/Approve/SubmitedRbuPriceList.aspx'><span>Unapproved RBU price</span></a></li><li><a href='/OEM_ODM(PM).aspx'><span>DirectSell ODM(PM)</span></a></li><li><a href='/ODMPriceApproveList.aspx'><span>Approve DirectSell ODM Price</span></a></li><li><a href='/Price/PriceNotify.aspx'><span>Price Notify</span></a></li><li><a href='http://report.adlinktech.com/Reports/report/Sales/PriceBook/Without_RBU_price' target='_blank'><span>Without RBU Price</span></a></li>
+                                </ul>
+                            </li>
+                            <li><a href='#' class='parent'><span>RBU/PMM</span></a>
+                                <ul>
+                                    
+                                </ul>
+                            </li>
+                            <li><a href='#' class='parent'><span>Admin</span></a>
+                                <ul>
+                                    
+                                </ul>
+                            </li>
+                            <li><a href='/ManualFaq.aspx'><span>Manual & FAQ</span></a>
+
+                            </li>
+                    </ul>
+                </div>
+
+            </div>
+            <div class="main">
+                
+    <h3 style="font-weight: bold">
+        View RBU Price Book(PS/PM)</h3>
+    
+    <table style="margin-top: 15px; width: 60%; border: solid 0.5px #cccccc; background-color: #eeeeee;">
+        <tr>
+            <td style="vertical-align: top" colspan="2">
+                <span id="MainContent_ProductGroup">ProductGroup:</span>
+                &nbsp;<select size="4" name="ctl00$MainContent$lb_ProductGroup" multiple="multiple" id="MainContent_lb_ProductGroup" class="required" style="width:600px;">
+	<option value="ISTS03">ISTS03 (EDGE DAQ)</option>
+	<option value="ISTS14">ISTS14 (Digitizer)</option>
+	<option value="ISTS15">ISTS15 (ModularInst.)</option>
+	<option value="ISTS44">ISTS44 (NuDAM)</option>
+
+</select>
+            </td>
+        </tr>
+        <tr>
+            <td class="style2">
+                Product Number:&nbsp;
+                <input name="ctl00$MainContent$txt_productNumber" type="text" id="MainContent_txt_productNumber" style="width:140px;" />
+            </td>
+            <td class="style4">
+                Product Name:
+                <input name="ctl00$MainContent$txt_productName" type="text" value="SDAQ-204" id="MainContent_txt_productName" style="width:140px;" />
+            </td>
+        </tr>
+        <tr>
+            <td class="style3">
+                Starting Date: <span title="If you put today, it will get the latest price in system,
+or input specific date to get the price within the date.">[?]</span>
+                <input name="ctl00$MainContent$txt_buildDateB" type="text" value="2026-02-03" id="MainContent_txt_buildDateB" class="dateISO" />
+                                                
+            </td>
+            <td class="style5">
+                <input type="submit" name="ctl00$MainContent$btn_search" value="Search" id="MainContent_btn_search" />
+                <input id="btn_clear" type="button" value="Clear" onclick="ClearSearch();" />
+                <input type="submit" name="ctl00$MainContent$Button2" value="Export" id="MainContent_Button2" /><br /><br />
+                <div id="Price" style="display:none" >
+                Find no priceing items:<br />
+                items&nbsp;&nbsp; with&nbsp; price&nbsp; on<input name="ctl00$MainContent$TBSD" type="text" value="2025-12-31" id="MainContent_TBSD" class="dateISO" style="width:150px;" />
+                 &nbsp;<br />and without price on 
+                     <input name="ctl00$MainContent$TBED" type="text" value="2026-02-03" id="MainContent_TBED" class="dateISO" style="width:150px;" />
+                 
+                <input type="submit" name="ctl00$MainContent$BtnDiff" value="Show RBU Difference" id="MainContent_BtnDiff" style="background-color:#FF99FF;" />
+                    </div>
+            </td>
+        </tr>
+        <tr>
+            <td class="style6" colspan="2">
+                <font color="red">Notes: Below contain out of date price information, show by red color. Please pay attention on the price valid date.</font>
+            </td>
+        </tr>
+        <script type="text/javascript">
+//<![CDATA[
+Sys.WebForms.PageRequestManager._initialize('ctl00$MainContent$ToolkitScriptManager', 'form', ['tctl00$MainContent$UpdatePanel1','MainContent_UpdatePanel1'], [], [], 90, 'ctl00');
+//]]>
+</script>
+
+    </table>
+    <div>
+        <!--
+<font color="Red">Product Group PURD02-RAM will not provide RBU price and local price from now,
+please contact Lisa Huang or Doris Wu.</font> -->
+        <br />
+        <span title='For 91-xxxxx-xxv0 items, system will only keep price of the latest version.'>
+            Notice For 91-xxxxx-xxv0[?]</span>
+    </div>
+    <br />
+    <table width="600px" align="center">
+        <tr>
+            <td width="20px" style="background-color: #99FF66">
+                &nbsp;
+            </td>
+            <td>
+                Discount Rate
+            </td>
+            <td width="20px" style="background-color: #FFFF66">
+                &nbsp;
+            </td>
+            <td>
+                Adjusted RBU Price
+            </td>
+            <td width="20px" style=" background-color:#00BBFF ">
+                &nbsp;</td>
+            <td>
+                Internal Transfer Price Profit % = (Internal Transfer Price - Cost) / Internal Transfer Price × 100%</td>
+            
+            
+        </tr>
+    </table>
+    <br />
+    <br />
+    <div class="MessageBox">
+        <span id="MainContent_txtError" style="color:Red;"></span>
+    </div>
+    <br />
+    <br />
+    <div style="width: 45%; display: inline; float: left;">
+        <input type="submit" name="ctl00$MainContent$btn_displayAll" value="Display all colunms" id="MainContent_btn_displayAll" />
+    </div>
+    <div style="width: 45%; display: inline; float: right; text-align: right;">
+    </div>
+    <br />
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <!--GridView-->
+    <div>
+	<table cellspacing="1" cellpadding="5" id="MainContent_gv" style="background-color:#DDDDDD;border-width:1px;border-style:None;line-height: 22px; width: 100%;">
+		<thead>
+			<tr style="background-color:#EFEFEF;font-weight:bold;">
+				<th align="center" scope="col">
+                    <table>
+                        <tr>
+                            <td>
+                                Select
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align="center">
+                                <span title="Click to select/unselect all."><input id="MainContent_gv_CheckAll" type="checkbox" name="ctl00$MainContent$gv$ctl01$CheckAll" onclick="javascript: chkall(this);" /></span>
+                            </td>
+                        </tr>
+                    </table>
+                </th><th align="center" scope="col">PartNumber/ Name /Spec <span title='Description remove duplication string of Part Name and (G),(EA),(RW).'>[?]</span></th><th align="center" scope="col">Description</th><th align="center" scope="col">Starting Date</th><th scope="col">Ending Date</th><th align="center" scope="col">Quantity</th><th align="center" scope="col" style="background-color:#FF9933;">Currency</th><th align="center" scope="col" style="background-color:#FF9933;">MPP Target Cost</th><th align="center" scope="col" style="background-color:#FF9933;">List Price</th><th align="center" scope="col" style="background-color:#FF9933;">Base Price</th><th align="center" scope="col" style="background-color:#99FF66;"><B>AATI</B></th><th align="center" scope="col" style="background-color:#99FF66;"><B>SIN</B></th><th align="center" scope="col" style="background-color:#99FF66;"><B>CHN</B></th><th align="center" scope="col" style="background-color:#99FF66;"><B>EMEA</B></th><th align="center" scope="col" style="background-color:#99FF66;"><B>JAPAN</B></th><th align="center" scope="col" style="background-color:#99FF66;"><B>KOREA</B></th><th align="center" scope="col" style="background-color:#99FF66;"><B>TWN</B></th><th align="center" scope="col" style="background-color:#99FF66;"><B>ANZ</B></th><th align="center" scope="col" style="background-color:#99FF66;"><B>ADI</B></th>
+			</tr>
+		</thead><tbody>
+			<tr style="color:Black;background-color:White;">
+				<td align="center">
+                    <span class="view"><input id="MainContent_gv_CheckBox_0" type="checkbox" name="ctl00$MainContent$gv$ctl02$CheckBox" /></span>
+                </td><td align="left" style="width:20%;">
+                    <a id="MainContent_gv_HyperLink1_0" onclick="win=window.open (this.href, &#39;popupwindow&#39;,  &#39;width=600,height=400,scrollbars,resizable&#39;);win.focus();return false;" href="HistoryPrice.aspx?pn=91-14096-5030">91-14096-5030</a>
+                    <br />
+                    SDAQ-204<br />
+                    (G)4-ch AI, 24-bit, 128KS/s, 4-ch DI/O
+                </td><td style="width:100px;">
+                    SDAQ-204
+Standalone Ethernet DAQ with 4-ch AI, 24-bit, 128KS/s, 4-ch DI/O
+                </td><td align="center" style="width:100px;">
+                    <span id="MainContent_gv_lblStarting_Date_0" style="display:inline-block;width:100px;">2026/01/01</span>
+                    
+                </td><td align="center" style="width:100px;">
+                    <span id="MainContent_gv_lblEnding_Date_0" style="display:inline-block;width:100px;">2026/06/30</span>
+                    
+                </td><td align="center" style="width:100px;">
+                    1
+                </td><td align="center" style="background-color:#FF9933;width:100px;">
+                    USD
+                </td><td align="center" style="background-color:#FF9933;width:100px;">
+                        0
+                    </td><td align="center" style="background-color:#FF9933;width:100px;">
+                    1,640.00
+                    
+                </td><td align="center" style="background-color:#FF9933;width:100px;">
+                    850.00
+                    
+                    <br /><span style='background-color:#00BBFF; color:Black;'>51.88%</span>
+                    <br /><span style='color:blue;font-weight:bold;' title='Plant(s)：1100&#10;Cost(Lowest)：12870.0000 (TWD)&#10;&#10;CAUTION! This is NOT the SBU Gross Margin.&#10;請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。'>(i)</span>
+                </td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_AATI_0">
+					<tr id="MainContent_gv_row1_AATI_0" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_AATI_0"><span id="MainContent_gv_dr_AATI_0">110.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_AATI_0" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_AATI_0"><span id="MainContent_gv_currency_AATI_0">(USD)<br/></span><span id="MainContent_gv_rp_AATI_0"><span style=' color: Red'>935.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_AATI_0" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_AATI_0"><span id="MainContent_gv_gmbu_AATI_0"><span style=' color: Black'>56.26%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_AATI_0" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_AATI_0"><span id="MainContent_gv_qw_AATI_0" title="Plant(s)：1100
+Cost(Lowest)：12870.0000 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_SIN_0">
+					<tr id="MainContent_gv_row1_SIN_0" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_SIN_0"><span id="MainContent_gv_dr_SIN_0">110.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_SIN_0" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_SIN_0"><span id="MainContent_gv_currency_SIN_0">(USD)<br/></span><span id="MainContent_gv_rp_SIN_0"><span style=' color: Red'>935.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_SIN_0" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_SIN_0"><span id="MainContent_gv_gmbu_SIN_0"><span style=' color: Black'>56.26%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_SIN_0" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_SIN_0"><span id="MainContent_gv_qw_SIN_0" title="Plant(s)：1100
+Cost(Lowest)：12870.0000 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_CHN_0">
+					<tr id="MainContent_gv_row1_CHN_0" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_CHN_0"><span id="MainContent_gv_dr_CHN_0">100.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_CHN_0" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_CHN_0"><span id="MainContent_gv_currency_CHN_0">(RMB)<br/></span><span id="MainContent_gv_rp_CHN_0"><span style=' color: Red'>6,013.47</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_CHN_0" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_CHN_0"><span id="MainContent_gv_gmbu_CHN_0"><span style=' color: Black'>52.75%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_CHN_0" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_CHN_0"><span id="MainContent_gv_qw_CHN_0" title="Plant(s)：1100
+Cost(Lowest)：12870.0000 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_EMEA_0">
+					<tr id="MainContent_gv_row1_EMEA_0" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_EMEA_0"><span id="MainContent_gv_dr_EMEA_0">110.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_EMEA_0" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_EMEA_0"><span id="MainContent_gv_currency_EMEA_0">(USD)<br/></span><span id="MainContent_gv_rp_EMEA_0"><span style=' color: Red'>935.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_EMEA_0" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_EMEA_0"><span id="MainContent_gv_gmbu_EMEA_0"><span style=' color: Black'>56.26%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_EMEA_0" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_EMEA_0"><span id="MainContent_gv_qw_EMEA_0" title="Plant(s)：1100
+Cost(Lowest)：12870.0000 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_JAPAN_0">
+					<tr id="MainContent_gv_row1_JAPAN_0" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_JAPAN_0"><span id="MainContent_gv_dr_JAPAN_0">105.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_JAPAN_0" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_JAPAN_0"><span id="MainContent_gv_currency_JAPAN_0">(JPY)<br/></span><span id="MainContent_gv_rp_JAPAN_0"><span style=' color: Red'>139,500.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_JAPAN_0" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_JAPAN_0"><span id="MainContent_gv_gmbu_JAPAN_0"><span style=' color: Black'>54.91%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_JAPAN_0" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_JAPAN_0"><span id="MainContent_gv_qw_JAPAN_0" title="Plant(s)：1100
+Cost(Lowest)：12870.0000 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_KOREA_0">
+					<tr id="MainContent_gv_row1_KOREA_0" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_KOREA_0"><span id="MainContent_gv_dr_KOREA_0">100.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_KOREA_0" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_KOREA_0"><span id="MainContent_gv_currency_KOREA_0">(USD)<br/></span><span id="MainContent_gv_rp_KOREA_0"><span style=' color: Red'>850.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_KOREA_0" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_KOREA_0"><span id="MainContent_gv_gmbu_KOREA_0"><span style=' color: Black'>51.88%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_KOREA_0" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_KOREA_0"><span id="MainContent_gv_qw_KOREA_0" title="Plant(s)：1100
+Cost(Lowest)：12870.0000 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_TWN_0">
+					<tr id="MainContent_gv_row1_TWN_0" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_TWN_0"><span id="MainContent_gv_dr_TWN_0">100.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_TWN_0" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_TWN_0"><span id="MainContent_gv_currency_TWN_0">(NTD)<br/></span><span id="MainContent_gv_rp_TWN_0"><span style=' color: Red'>26,700.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_TWN_0" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_TWN_0"><span id="MainContent_gv_gmbu_TWN_0"><span style=' color: Black'>51.80%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_TWN_0" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_TWN_0"><span id="MainContent_gv_qw_TWN_0" title="Plant(s)：1100
+Cost(Lowest)：12870.0000 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_ANZ_0">
+					<tr id="MainContent_gv_row1_ANZ_0" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_ANZ_0"><span id="MainContent_gv_dr_ANZ_0">110.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_ANZ_0" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_ANZ_0"><span id="MainContent_gv_currency_ANZ_0">(USD)<br/></span><span id="MainContent_gv_rp_ANZ_0"><span style=' color: Red'>935.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_ANZ_0" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_ANZ_0"><span id="MainContent_gv_gmbu_ANZ_0"><span style=' color: Black'>56.26%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_ANZ_0" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_ANZ_0"><span id="MainContent_gv_qw_ANZ_0" title="Plant(s)：1100
+Cost(Lowest)：12870.0000 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_ADI_0">
+					<tr id="MainContent_gv_row1_ADI_0" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_ADI_0"><span id="MainContent_gv_dr_ADI_0">110.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_ADI_0" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_ADI_0"><span id="MainContent_gv_currency_ADI_0">(USD)<br/></span><span id="MainContent_gv_rp_ADI_0"><span style=' color: Red'>935.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_ADI_0" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_ADI_0"><span id="MainContent_gv_gmbu_ADI_0"><span style=' color: Black'>56.26%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_ADI_0" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_ADI_0"><span id="MainContent_gv_qw_ADI_0" title="Plant(s)：1100
+Cost(Lowest)：12870.0000 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td>
+			</tr><tr style="color:Black;background-color:#F7FAFE;">
+				<td align="center">
+                    <span class="view"><input id="MainContent_gv_CheckBox_1" type="checkbox" name="ctl00$MainContent$gv$ctl03$CheckBox" /></span>
+                </td><td align="left" style="width:20%;">
+                    <a id="MainContent_gv_HyperLink1_1" onclick="win=window.open (this.href, &#39;popupwindow&#39;,  &#39;width=600,height=400,scrollbars,resizable&#39;);win.focus();return false;" href="HistoryPrice.aspx?pn=91-14096-5030">91-14096-5030</a>
+                    <br />
+                    SDAQ-204<br />
+                    (G)4-ch AI, 24-bit, 128KS/s, 4-ch DI/O
+                </td><td style="width:100px;">
+                    SDAQ-204
+Standalone Ethernet DAQ with 4-ch AI, 24-bit, 128KS/s, 4-ch DI/O
+                </td><td align="center" style="width:100px;">
+                    <span id="MainContent_gv_lblStarting_Date_1" style="display:inline-block;width:100px;">2026/01/01</span>
+                    
+                </td><td align="center" style="width:100px;">
+                    <span id="MainContent_gv_lblEnding_Date_1" style="display:inline-block;width:100px;">2026/06/30</span>
+                    
+                </td><td align="center" style="width:100px;">
+                    50
+                </td><td align="center" style="background-color:#FF9933;width:100px;">
+                    NTD
+                </td><td align="center" style="background-color:#FF9933;width:100px;">
+                        0
+                    </td><td align="center" style="background-color:#FF9933;width:100px;">
+                    41,000.00
+                    
+                </td><td align="center" style="background-color:#FF9933;width:100px;">
+                    21,700.00
+                    
+                    <br /><span style='background-color:#00BBFF; color:Black;'>40.69%</span>
+                    <br /><span style='color:blue;font-weight:bold;' title='Plant(s)：1100&#10;Cost(Lowest)：12870.0000 (TWD)&#10;&#10;CAUTION! This is NOT the SBU Gross Margin.&#10;請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。'>(i)</span>
+                </td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_AATI_1">
+					<tr id="MainContent_gv_row1_AATI_1" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_AATI_1"><span id="MainContent_gv_dr_AATI_1"></span></td>
+					</tr><tr id="MainContent_gv_row2_AATI_1" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_AATI_1"><span id="MainContent_gv_currency_AATI_1"></span><span id="MainContent_gv_rp_AATI_1"></span></td>
+					</tr><tr id="MainContent_gv_row3_AATI_1" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_AATI_1"><span id="MainContent_gv_gmbu_AATI_1"></span></td>
+					</tr><tr id="MainContent_gv_row4_AATI_1" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_AATI_1"><span id="MainContent_gv_qw_AATI_1"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_SIN_1">
+					<tr id="MainContent_gv_row1_SIN_1" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_SIN_1"><span id="MainContent_gv_dr_SIN_1"></span></td>
+					</tr><tr id="MainContent_gv_row2_SIN_1" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_SIN_1"><span id="MainContent_gv_currency_SIN_1"></span><span id="MainContent_gv_rp_SIN_1"></span></td>
+					</tr><tr id="MainContent_gv_row3_SIN_1" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_SIN_1"><span id="MainContent_gv_gmbu_SIN_1"></span></td>
+					</tr><tr id="MainContent_gv_row4_SIN_1" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_SIN_1"><span id="MainContent_gv_qw_SIN_1"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_CHN_1">
+					<tr id="MainContent_gv_row1_CHN_1" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_CHN_1"><span id="MainContent_gv_dr_CHN_1"></span></td>
+					</tr><tr id="MainContent_gv_row2_CHN_1" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_CHN_1"><span id="MainContent_gv_currency_CHN_1"></span><span id="MainContent_gv_rp_CHN_1"></span></td>
+					</tr><tr id="MainContent_gv_row3_CHN_1" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_CHN_1"><span id="MainContent_gv_gmbu_CHN_1"></span></td>
+					</tr><tr id="MainContent_gv_row4_CHN_1" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_CHN_1"><span id="MainContent_gv_qw_CHN_1"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_EMEA_1">
+					<tr id="MainContent_gv_row1_EMEA_1" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_EMEA_1"><span id="MainContent_gv_dr_EMEA_1"></span></td>
+					</tr><tr id="MainContent_gv_row2_EMEA_1" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_EMEA_1"><span id="MainContent_gv_currency_EMEA_1"></span><span id="MainContent_gv_rp_EMEA_1"></span></td>
+					</tr><tr id="MainContent_gv_row3_EMEA_1" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_EMEA_1"><span id="MainContent_gv_gmbu_EMEA_1"></span></td>
+					</tr><tr id="MainContent_gv_row4_EMEA_1" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_EMEA_1"><span id="MainContent_gv_qw_EMEA_1"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_JAPAN_1">
+					<tr id="MainContent_gv_row1_JAPAN_1" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_JAPAN_1"><span id="MainContent_gv_dr_JAPAN_1"></span></td>
+					</tr><tr id="MainContent_gv_row2_JAPAN_1" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_JAPAN_1"><span id="MainContent_gv_currency_JAPAN_1"></span><span id="MainContent_gv_rp_JAPAN_1"></span></td>
+					</tr><tr id="MainContent_gv_row3_JAPAN_1" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_JAPAN_1"><span id="MainContent_gv_gmbu_JAPAN_1"></span></td>
+					</tr><tr id="MainContent_gv_row4_JAPAN_1" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_JAPAN_1"><span id="MainContent_gv_qw_JAPAN_1"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_KOREA_1">
+					<tr id="MainContent_gv_row1_KOREA_1" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_KOREA_1"><span id="MainContent_gv_dr_KOREA_1"></span></td>
+					</tr><tr id="MainContent_gv_row2_KOREA_1" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_KOREA_1"><span id="MainContent_gv_currency_KOREA_1"></span><span id="MainContent_gv_rp_KOREA_1"></span></td>
+					</tr><tr id="MainContent_gv_row3_KOREA_1" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_KOREA_1"><span id="MainContent_gv_gmbu_KOREA_1"></span></td>
+					</tr><tr id="MainContent_gv_row4_KOREA_1" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_KOREA_1"><span id="MainContent_gv_qw_KOREA_1"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_TWN_1">
+					<tr id="MainContent_gv_row1_TWN_1" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_TWN_1"><span id="MainContent_gv_dr_TWN_1">100.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_TWN_1" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_TWN_1"><span id="MainContent_gv_currency_TWN_1">(NTD)<br/></span><span id="MainContent_gv_rp_TWN_1"><span style=' color: Red'>21,700.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_TWN_1" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_TWN_1"><span id="MainContent_gv_gmbu_TWN_1"><span style=' color: Black'>40.69%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_TWN_1" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_TWN_1"><span id="MainContent_gv_qw_TWN_1" title="Plant(s)：1100
+Cost(Lowest)：12870.0000 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_ANZ_1">
+					<tr id="MainContent_gv_row1_ANZ_1" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_ANZ_1"><span id="MainContent_gv_dr_ANZ_1"></span></td>
+					</tr><tr id="MainContent_gv_row2_ANZ_1" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_ANZ_1"><span id="MainContent_gv_currency_ANZ_1"></span><span id="MainContent_gv_rp_ANZ_1"></span></td>
+					</tr><tr id="MainContent_gv_row3_ANZ_1" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_ANZ_1"><span id="MainContent_gv_gmbu_ANZ_1"></span></td>
+					</tr><tr id="MainContent_gv_row4_ANZ_1" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_ANZ_1"><span id="MainContent_gv_qw_ANZ_1"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_ADI_1">
+					<tr id="MainContent_gv_row1_ADI_1" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_ADI_1"><span id="MainContent_gv_dr_ADI_1"></span></td>
+					</tr><tr id="MainContent_gv_row2_ADI_1" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_ADI_1"><span id="MainContent_gv_currency_ADI_1"></span><span id="MainContent_gv_rp_ADI_1"></span></td>
+					</tr><tr id="MainContent_gv_row3_ADI_1" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_ADI_1"><span id="MainContent_gv_gmbu_ADI_1"></span></td>
+					</tr><tr id="MainContent_gv_row4_ADI_1" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_ADI_1"><span id="MainContent_gv_qw_ADI_1"></span></td>
+					</tr>
+				</table></td>
+			</tr><tr style="color:Black;background-color:White;">
+				<td align="center">
+                    <span class="view"><input id="MainContent_gv_CheckBox_2" type="checkbox" name="ctl00$MainContent$gv$ctl04$CheckBox" /></span>
+                </td><td align="left" style="width:20%;">
+                    <a id="MainContent_gv_HyperLink1_2" onclick="win=window.open (this.href, &#39;popupwindow&#39;,  &#39;width=600,height=400,scrollbars,resizable&#39;);win.focus();return false;" href="HistoryPrice.aspx?pn=91-14096-6010">91-14096-6010</a>
+                    <br />
+                    SDAQ-204-WT<br />
+                    (G)4-ch AI, 24-bit, 128KS/s, 4-ch DI/O,-20~70 °C
+                </td><td style="width:100px;">
+                    SDAQ-204 Standalone Ethernet DAQ with 4-ch AI, 24-bit, 128KS/s, 4-ch DI/O, -20~70 °C operation temperature
+                </td><td align="center" style="width:100px;">
+                    <span id="MainContent_gv_lblStarting_Date_2" style="display:inline-block;width:100px;">2026/01/01</span>
+                    
+                </td><td align="center" style="width:100px;">
+                    <span id="MainContent_gv_lblEnding_Date_2" style="display:inline-block;width:100px;">2026/06/30</span>
+                    
+                </td><td align="center" style="width:100px;">
+                    1
+                </td><td align="center" style="background-color:#FF9933;width:100px;">
+                    USD
+                </td><td align="center" style="background-color:#FF9933;width:100px;">
+                        0
+                    </td><td align="center" style="background-color:#FF9933;width:100px;">
+                    1,740.00
+                    
+                </td><td align="center" style="background-color:#FF9933;width:100px;">
+                    900.00
+                    
+                    <br /><span style='background-color:#00BBFF; color:Black;'>48.02%</span>
+                    <br /><span style='color:blue;font-weight:bold;' title='Plant(s)：1100&#10;Cost(Lowest)：14722.3300 (TWD)&#10;&#10;CAUTION! This is NOT the SBU Gross Margin.&#10;請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。'>(i)</span>
+                </td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_AATI_2">
+					<tr id="MainContent_gv_row1_AATI_2" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_AATI_2"><span id="MainContent_gv_dr_AATI_2">110.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_AATI_2" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_AATI_2"><span id="MainContent_gv_currency_AATI_2">(USD)<br/></span><span id="MainContent_gv_rp_AATI_2"><span style=' color: Red'>990.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_AATI_2" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_AATI_2"><span id="MainContent_gv_gmbu_AATI_2"><span style=' color: Black'>52.74%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_AATI_2" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_AATI_2"><span id="MainContent_gv_qw_AATI_2" title="Plant(s)：1100
+Cost(Lowest)：14722.3300 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_SIN_2">
+					<tr id="MainContent_gv_row1_SIN_2" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_SIN_2"><span id="MainContent_gv_dr_SIN_2">110.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_SIN_2" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_SIN_2"><span id="MainContent_gv_currency_SIN_2">(USD)<br/></span><span id="MainContent_gv_rp_SIN_2"><span style=' color: Red'>990.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_SIN_2" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_SIN_2"><span id="MainContent_gv_gmbu_SIN_2"><span style=' color: Black'>52.74%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_SIN_2" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_SIN_2"><span id="MainContent_gv_qw_SIN_2" title="Plant(s)：1100
+Cost(Lowest)：14722.3300 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_CHN_2">
+					<tr id="MainContent_gv_row1_CHN_2" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_CHN_2"><span id="MainContent_gv_dr_CHN_2">100.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_CHN_2" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_CHN_2"><span id="MainContent_gv_currency_CHN_2">(RMB)<br/></span><span id="MainContent_gv_rp_CHN_2"><span style=' color: Red'>6,367.20</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_CHN_2" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_CHN_2"><span id="MainContent_gv_gmbu_CHN_2"><span style=' color: Black'>48.96%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_CHN_2" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_CHN_2"><span id="MainContent_gv_qw_CHN_2" title="Plant(s)：1100
+Cost(Lowest)：14722.3300 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_EMEA_2">
+					<tr id="MainContent_gv_row1_EMEA_2" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_EMEA_2"><span id="MainContent_gv_dr_EMEA_2">110.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_EMEA_2" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_EMEA_2"><span id="MainContent_gv_currency_EMEA_2">(USD)<br/></span><span id="MainContent_gv_rp_EMEA_2"><span style=' color: Red'>990.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_EMEA_2" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_EMEA_2"><span id="MainContent_gv_gmbu_EMEA_2"><span style=' color: Black'>52.74%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_EMEA_2" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_EMEA_2"><span id="MainContent_gv_qw_EMEA_2" title="Plant(s)：1100
+Cost(Lowest)：14722.3300 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_JAPAN_2">
+					<tr id="MainContent_gv_row1_JAPAN_2" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_JAPAN_2"><span id="MainContent_gv_dr_JAPAN_2">105.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_JAPAN_2" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_JAPAN_2"><span id="MainContent_gv_currency_JAPAN_2">(JPY)<br/></span><span id="MainContent_gv_rp_JAPAN_2"><span style=' color: Red'>147,700.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_JAPAN_2" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_JAPAN_2"><span id="MainContent_gv_gmbu_JAPAN_2"><span style=' color: Black'>51.28%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_JAPAN_2" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_JAPAN_2"><span id="MainContent_gv_qw_JAPAN_2" title="Plant(s)：1100
+Cost(Lowest)：14722.3300 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_KOREA_2">
+					<tr id="MainContent_gv_row1_KOREA_2" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_KOREA_2"><span id="MainContent_gv_dr_KOREA_2">100.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_KOREA_2" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_KOREA_2"><span id="MainContent_gv_currency_KOREA_2">(USD)<br/></span><span id="MainContent_gv_rp_KOREA_2"><span style=' color: Red'>900.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_KOREA_2" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_KOREA_2"><span id="MainContent_gv_gmbu_KOREA_2"><span style=' color: Black'>48.02%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_KOREA_2" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_KOREA_2"><span id="MainContent_gv_qw_KOREA_2" title="Plant(s)：1100
+Cost(Lowest)：14722.3300 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_TWN_2">
+					<tr id="MainContent_gv_row1_TWN_2" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_TWN_2"><span id="MainContent_gv_dr_TWN_2">100.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_TWN_2" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_TWN_2"><span id="MainContent_gv_currency_TWN_2">(NTD)<br/></span><span id="MainContent_gv_rp_TWN_2"><span style=' color: Red'>28,270.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_TWN_2" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_TWN_2"><span id="MainContent_gv_gmbu_TWN_2"><span style=' color: Black'>47.92%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_TWN_2" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_TWN_2"><span id="MainContent_gv_qw_TWN_2" title="Plant(s)：1100
+Cost(Lowest)：14722.3300 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_ANZ_2">
+					<tr id="MainContent_gv_row1_ANZ_2" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_ANZ_2"><span id="MainContent_gv_dr_ANZ_2">110.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_ANZ_2" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_ANZ_2"><span id="MainContent_gv_currency_ANZ_2">(USD)<br/></span><span id="MainContent_gv_rp_ANZ_2"><span style=' color: Red'>990.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_ANZ_2" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_ANZ_2"><span id="MainContent_gv_gmbu_ANZ_2"><span style=' color: Black'>52.74%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_ANZ_2" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_ANZ_2"><span id="MainContent_gv_qw_ANZ_2" title="Plant(s)：1100
+Cost(Lowest)：14722.3300 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_ADI_2">
+					<tr id="MainContent_gv_row1_ADI_2" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_ADI_2"><span id="MainContent_gv_dr_ADI_2">110.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_ADI_2" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_ADI_2"><span id="MainContent_gv_currency_ADI_2">(USD)<br/></span><span id="MainContent_gv_rp_ADI_2"><span style=' color: Red'>990.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_ADI_2" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_ADI_2"><span id="MainContent_gv_gmbu_ADI_2"><span style=' color: Black'>52.74%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_ADI_2" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_ADI_2"><span id="MainContent_gv_qw_ADI_2" title="Plant(s)：1100
+Cost(Lowest)：14722.3300 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td>
+			</tr><tr style="color:Black;background-color:#F7FAFE;">
+				<td align="center">
+                    <span class="view"><input id="MainContent_gv_CheckBox_3" type="checkbox" name="ctl00$MainContent$gv$ctl05$CheckBox" /></span>
+                </td><td align="left" style="width:20%;">
+                    <a id="MainContent_gv_HyperLink1_3" onclick="win=window.open (this.href, &#39;popupwindow&#39;,  &#39;width=600,height=400,scrollbars,resizable&#39;);win.focus();return false;" href="HistoryPrice.aspx?pn=91-14096-8030">91-14096-8030</a>
+                    <br />
+                    SDAQ-204/L<br />
+                    (G)SDAQ-204 Lite version
+                </td><td style="width:100px;">
+                    SDAQ-204 Lite version, only provide OA data
+                </td><td align="center" style="width:100px;">
+                    <span id="MainContent_gv_lblStarting_Date_3" style="display:inline-block;width:100px;">2026/01/01</span>
+                    
+                </td><td align="center" style="width:100px;">
+                    <span id="MainContent_gv_lblEnding_Date_3" style="display:inline-block;width:100px;">2026/06/30</span>
+                    
+                </td><td align="center" style="width:100px;">
+                    1
+                </td><td align="center" style="background-color:#FF9933;width:100px;">
+                    NTD
+                </td><td align="center" style="background-color:#FF9933;width:100px;">
+                        0
+                    </td><td align="center" style="background-color:#FF9933;width:100px;">
+                    41,000.00
+                    
+                </td><td align="center" style="background-color:#FF9933;width:100px;">
+                    23,700.00
+                    
+                    <br /><span style='background-color:#00BBFF; color:Black;'>34.63%</span>
+                    <br /><span style='color:blue;font-weight:bold;' title='Plant(s)：1100&#10;Cost(Lowest)：15493.0000 (TWD)&#10;&#10;CAUTION! This is NOT the SBU Gross Margin.&#10;請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。'>(i)</span>
+                </td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_AATI_3">
+					<tr id="MainContent_gv_row1_AATI_3" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_AATI_3"><span id="MainContent_gv_dr_AATI_3"></span></td>
+					</tr><tr id="MainContent_gv_row2_AATI_3" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_AATI_3"><span id="MainContent_gv_currency_AATI_3"></span><span id="MainContent_gv_rp_AATI_3"></span></td>
+					</tr><tr id="MainContent_gv_row3_AATI_3" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_AATI_3"><span id="MainContent_gv_gmbu_AATI_3"></span></td>
+					</tr><tr id="MainContent_gv_row4_AATI_3" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_AATI_3"><span id="MainContent_gv_qw_AATI_3"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_SIN_3">
+					<tr id="MainContent_gv_row1_SIN_3" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_SIN_3"><span id="MainContent_gv_dr_SIN_3"></span></td>
+					</tr><tr id="MainContent_gv_row2_SIN_3" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_SIN_3"><span id="MainContent_gv_currency_SIN_3"></span><span id="MainContent_gv_rp_SIN_3"></span></td>
+					</tr><tr id="MainContent_gv_row3_SIN_3" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_SIN_3"><span id="MainContent_gv_gmbu_SIN_3"></span></td>
+					</tr><tr id="MainContent_gv_row4_SIN_3" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_SIN_3"><span id="MainContent_gv_qw_SIN_3"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_CHN_3">
+					<tr id="MainContent_gv_row1_CHN_3" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_CHN_3"><span id="MainContent_gv_dr_CHN_3"></span></td>
+					</tr><tr id="MainContent_gv_row2_CHN_3" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_CHN_3"><span id="MainContent_gv_currency_CHN_3"></span><span id="MainContent_gv_rp_CHN_3"></span></td>
+					</tr><tr id="MainContent_gv_row3_CHN_3" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_CHN_3"><span id="MainContent_gv_gmbu_CHN_3"></span></td>
+					</tr><tr id="MainContent_gv_row4_CHN_3" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_CHN_3"><span id="MainContent_gv_qw_CHN_3"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_EMEA_3">
+					<tr id="MainContent_gv_row1_EMEA_3" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_EMEA_3"><span id="MainContent_gv_dr_EMEA_3"></span></td>
+					</tr><tr id="MainContent_gv_row2_EMEA_3" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_EMEA_3"><span id="MainContent_gv_currency_EMEA_3"></span><span id="MainContent_gv_rp_EMEA_3"></span></td>
+					</tr><tr id="MainContent_gv_row3_EMEA_3" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_EMEA_3"><span id="MainContent_gv_gmbu_EMEA_3"></span></td>
+					</tr><tr id="MainContent_gv_row4_EMEA_3" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_EMEA_3"><span id="MainContent_gv_qw_EMEA_3"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_JAPAN_3">
+					<tr id="MainContent_gv_row1_JAPAN_3" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_JAPAN_3"><span id="MainContent_gv_dr_JAPAN_3"></span></td>
+					</tr><tr id="MainContent_gv_row2_JAPAN_3" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_JAPAN_3"><span id="MainContent_gv_currency_JAPAN_3"></span><span id="MainContent_gv_rp_JAPAN_3"></span></td>
+					</tr><tr id="MainContent_gv_row3_JAPAN_3" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_JAPAN_3"><span id="MainContent_gv_gmbu_JAPAN_3"></span></td>
+					</tr><tr id="MainContent_gv_row4_JAPAN_3" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_JAPAN_3"><span id="MainContent_gv_qw_JAPAN_3"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_KOREA_3">
+					<tr id="MainContent_gv_row1_KOREA_3" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_KOREA_3"><span id="MainContent_gv_dr_KOREA_3"></span></td>
+					</tr><tr id="MainContent_gv_row2_KOREA_3" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_KOREA_3"><span id="MainContent_gv_currency_KOREA_3"></span><span id="MainContent_gv_rp_KOREA_3"></span></td>
+					</tr><tr id="MainContent_gv_row3_KOREA_3" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_KOREA_3"><span id="MainContent_gv_gmbu_KOREA_3"></span></td>
+					</tr><tr id="MainContent_gv_row4_KOREA_3" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_KOREA_3"><span id="MainContent_gv_qw_KOREA_3"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_TWN_3">
+					<tr id="MainContent_gv_row1_TWN_3" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_TWN_3"><span id="MainContent_gv_dr_TWN_3">100.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_TWN_3" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_TWN_3"><span id="MainContent_gv_currency_TWN_3">(NTD)<br/></span><span id="MainContent_gv_rp_TWN_3"><span style=' color: Red'>23,700.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_TWN_3" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_TWN_3"><span id="MainContent_gv_gmbu_TWN_3"><span style=' color: Black'>34.63%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_TWN_3" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_TWN_3"><span id="MainContent_gv_qw_TWN_3" title="Plant(s)：1100
+Cost(Lowest)：15493.0000 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_ANZ_3">
+					<tr id="MainContent_gv_row1_ANZ_3" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_ANZ_3"><span id="MainContent_gv_dr_ANZ_3"></span></td>
+					</tr><tr id="MainContent_gv_row2_ANZ_3" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_ANZ_3"><span id="MainContent_gv_currency_ANZ_3"></span><span id="MainContent_gv_rp_ANZ_3"></span></td>
+					</tr><tr id="MainContent_gv_row3_ANZ_3" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_ANZ_3"><span id="MainContent_gv_gmbu_ANZ_3"></span></td>
+					</tr><tr id="MainContent_gv_row4_ANZ_3" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_ANZ_3"><span id="MainContent_gv_qw_ANZ_3"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_ADI_3">
+					<tr id="MainContent_gv_row1_ADI_3" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_ADI_3"><span id="MainContent_gv_dr_ADI_3"></span></td>
+					</tr><tr id="MainContent_gv_row2_ADI_3" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_ADI_3"><span id="MainContent_gv_currency_ADI_3"></span><span id="MainContent_gv_rp_ADI_3"></span></td>
+					</tr><tr id="MainContent_gv_row3_ADI_3" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_ADI_3"><span id="MainContent_gv_gmbu_ADI_3"></span></td>
+					</tr><tr id="MainContent_gv_row4_ADI_3" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_ADI_3"><span id="MainContent_gv_qw_ADI_3"></span></td>
+					</tr>
+				</table></td>
+			</tr><tr style="color:Black;background-color:White;">
+				<td align="center">
+                    <span class="view"><input id="MainContent_gv_CheckBox_4" type="checkbox" name="ctl00$MainContent$gv$ctl06$CheckBox" /></span>
+                </td><td align="left" style="width:20%;">
+                    <a id="MainContent_gv_HyperLink1_4" onclick="win=window.open (this.href, &#39;popupwindow&#39;,  &#39;width=600,height=400,scrollbars,resizable&#39;);win.focus();return false;" href="HistoryPrice.aspx?pn=91-14096-8030">91-14096-8030</a>
+                    <br />
+                    SDAQ-204/L<br />
+                    (G)SDAQ-204 Lite version
+                </td><td style="width:100px;">
+                    SDAQ-204 Lite version, only provide OA data
+                </td><td align="center" style="width:100px;">
+                    <span id="MainContent_gv_lblStarting_Date_4" style="display:inline-block;width:100px;">2026/01/01</span>
+                    
+                </td><td align="center" style="width:100px;">
+                    <span id="MainContent_gv_lblEnding_Date_4" style="display:inline-block;width:100px;">2026/06/30</span>
+                    
+                </td><td align="center" style="width:100px;">
+                    50
+                </td><td align="center" style="background-color:#FF9933;width:100px;">
+                    NTD
+                </td><td align="center" style="background-color:#FF9933;width:100px;">
+                        0
+                    </td><td align="center" style="background-color:#FF9933;width:100px;">
+                    31,000.00
+                    
+                </td><td align="center" style="background-color:#FF9933;width:100px;">
+                    21,700.00
+                    
+                    <br /><span style='background-color:#00BBFF; color:Black;'>28.60%</span>
+                    <br /><span style='color:blue;font-weight:bold;' title='Plant(s)：1100&#10;Cost(Lowest)：15493.0000 (TWD)&#10;&#10;CAUTION! This is NOT the SBU Gross Margin.&#10;請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。'>(i)</span>
+                </td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_AATI_4">
+					<tr id="MainContent_gv_row1_AATI_4" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_AATI_4"><span id="MainContent_gv_dr_AATI_4"></span></td>
+					</tr><tr id="MainContent_gv_row2_AATI_4" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_AATI_4"><span id="MainContent_gv_currency_AATI_4"></span><span id="MainContent_gv_rp_AATI_4"></span></td>
+					</tr><tr id="MainContent_gv_row3_AATI_4" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_AATI_4"><span id="MainContent_gv_gmbu_AATI_4"></span></td>
+					</tr><tr id="MainContent_gv_row4_AATI_4" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_AATI_4"><span id="MainContent_gv_qw_AATI_4"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_SIN_4">
+					<tr id="MainContent_gv_row1_SIN_4" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_SIN_4"><span id="MainContent_gv_dr_SIN_4"></span></td>
+					</tr><tr id="MainContent_gv_row2_SIN_4" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_SIN_4"><span id="MainContent_gv_currency_SIN_4"></span><span id="MainContent_gv_rp_SIN_4"></span></td>
+					</tr><tr id="MainContent_gv_row3_SIN_4" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_SIN_4"><span id="MainContent_gv_gmbu_SIN_4"></span></td>
+					</tr><tr id="MainContent_gv_row4_SIN_4" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_SIN_4"><span id="MainContent_gv_qw_SIN_4"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_CHN_4">
+					<tr id="MainContent_gv_row1_CHN_4" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_CHN_4"><span id="MainContent_gv_dr_CHN_4"></span></td>
+					</tr><tr id="MainContent_gv_row2_CHN_4" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_CHN_4"><span id="MainContent_gv_currency_CHN_4"></span><span id="MainContent_gv_rp_CHN_4"></span></td>
+					</tr><tr id="MainContent_gv_row3_CHN_4" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_CHN_4"><span id="MainContent_gv_gmbu_CHN_4"></span></td>
+					</tr><tr id="MainContent_gv_row4_CHN_4" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_CHN_4"><span id="MainContent_gv_qw_CHN_4"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_EMEA_4">
+					<tr id="MainContent_gv_row1_EMEA_4" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_EMEA_4"><span id="MainContent_gv_dr_EMEA_4"></span></td>
+					</tr><tr id="MainContent_gv_row2_EMEA_4" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_EMEA_4"><span id="MainContent_gv_currency_EMEA_4"></span><span id="MainContent_gv_rp_EMEA_4"></span></td>
+					</tr><tr id="MainContent_gv_row3_EMEA_4" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_EMEA_4"><span id="MainContent_gv_gmbu_EMEA_4"></span></td>
+					</tr><tr id="MainContent_gv_row4_EMEA_4" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_EMEA_4"><span id="MainContent_gv_qw_EMEA_4"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_JAPAN_4">
+					<tr id="MainContent_gv_row1_JAPAN_4" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_JAPAN_4"><span id="MainContent_gv_dr_JAPAN_4"></span></td>
+					</tr><tr id="MainContent_gv_row2_JAPAN_4" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_JAPAN_4"><span id="MainContent_gv_currency_JAPAN_4"></span><span id="MainContent_gv_rp_JAPAN_4"></span></td>
+					</tr><tr id="MainContent_gv_row3_JAPAN_4" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_JAPAN_4"><span id="MainContent_gv_gmbu_JAPAN_4"></span></td>
+					</tr><tr id="MainContent_gv_row4_JAPAN_4" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_JAPAN_4"><span id="MainContent_gv_qw_JAPAN_4"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_KOREA_4">
+					<tr id="MainContent_gv_row1_KOREA_4" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_KOREA_4"><span id="MainContent_gv_dr_KOREA_4"></span></td>
+					</tr><tr id="MainContent_gv_row2_KOREA_4" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_KOREA_4"><span id="MainContent_gv_currency_KOREA_4"></span><span id="MainContent_gv_rp_KOREA_4"></span></td>
+					</tr><tr id="MainContent_gv_row3_KOREA_4" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_KOREA_4"><span id="MainContent_gv_gmbu_KOREA_4"></span></td>
+					</tr><tr id="MainContent_gv_row4_KOREA_4" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_KOREA_4"><span id="MainContent_gv_qw_KOREA_4"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_TWN_4">
+					<tr id="MainContent_gv_row1_TWN_4" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_TWN_4"><span id="MainContent_gv_dr_TWN_4">100.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_TWN_4" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_TWN_4"><span id="MainContent_gv_currency_TWN_4">(NTD)<br/></span><span id="MainContent_gv_rp_TWN_4"><span style=' color: Red'>21,700.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_TWN_4" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_TWN_4"><span id="MainContent_gv_gmbu_TWN_4"><span style=' color: Black'>28.60%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_TWN_4" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_TWN_4"><span id="MainContent_gv_qw_TWN_4" title="Plant(s)：1100
+Cost(Lowest)：15493.0000 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_ANZ_4">
+					<tr id="MainContent_gv_row1_ANZ_4" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_ANZ_4"><span id="MainContent_gv_dr_ANZ_4"></span></td>
+					</tr><tr id="MainContent_gv_row2_ANZ_4" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_ANZ_4"><span id="MainContent_gv_currency_ANZ_4"></span><span id="MainContent_gv_rp_ANZ_4"></span></td>
+					</tr><tr id="MainContent_gv_row3_ANZ_4" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_ANZ_4"><span id="MainContent_gv_gmbu_ANZ_4"></span></td>
+					</tr><tr id="MainContent_gv_row4_ANZ_4" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_ANZ_4"><span id="MainContent_gv_qw_ANZ_4"></span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_ADI_4">
+					<tr id="MainContent_gv_row1_ADI_4" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_ADI_4"><span id="MainContent_gv_dr_ADI_4"></span></td>
+					</tr><tr id="MainContent_gv_row2_ADI_4" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_ADI_4"><span id="MainContent_gv_currency_ADI_4"></span><span id="MainContent_gv_rp_ADI_4"></span></td>
+					</tr><tr id="MainContent_gv_row3_ADI_4" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_ADI_4"><span id="MainContent_gv_gmbu_ADI_4"></span></td>
+					</tr><tr id="MainContent_gv_row4_ADI_4" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_ADI_4"><span id="MainContent_gv_qw_ADI_4"></span></td>
+					</tr>
+				</table></td>
+			</tr><tr style="color:Black;background-color:#F7FAFE;">
+				<td align="center">
+                    <span class="view"><input id="MainContent_gv_CheckBox_5" type="checkbox" name="ctl00$MainContent$gv$ctl07$CheckBox" /></span>
+                </td><td align="left" style="width:20%;">
+                    <a id="MainContent_gv_HyperLink1_5" onclick="win=window.open (this.href, &#39;popupwindow&#39;,  &#39;width=600,height=400,scrollbars,resizable&#39;);win.focus();return false;" href="HistoryPrice.aspx?pn=91-14096-9010">91-14096-9010</a>
+                    <br />
+                    SDAQ-204-DPM<br />
+                    (G)Rev 1.0
+                </td><td style="width:100px;">
+                    SDAQ-204 + Dry Pump Monitoring Software
+                </td><td align="center" style="width:100px;">
+                    <span id="MainContent_gv_lblStarting_Date_5" style="display:inline-block;width:100px;">2026/01/01</span>
+                    
+                </td><td align="center" style="width:100px;">
+                    <span id="MainContent_gv_lblEnding_Date_5" style="display:inline-block;width:100px;">2026/06/30</span>
+                    
+                </td><td align="center" style="width:100px;">
+                    1
+                </td><td align="center" style="background-color:#FF9933;width:100px;">
+                    USD
+                </td><td align="center" style="background-color:#FF9933;width:100px;">
+                        0
+                    </td><td align="center" style="background-color:#FF9933;width:100px;">
+                    2,000.00
+                    
+                </td><td align="center" style="background-color:#FF9933;width:100px;">
+                    1,030.00
+                    
+                    <br /><span style='background-color:#00BBFF; color:Black;'>38.01%</span>
+                    <br /><span style='color:blue;font-weight:bold;' title='Plant(s)：1100&#10;Cost(Lowest)：20093.1100 (TWD)&#10;&#10;CAUTION! This is NOT the SBU Gross Margin.&#10;請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。'>(i)</span>
+                </td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_AATI_5">
+					<tr id="MainContent_gv_row1_AATI_5" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_AATI_5"><span id="MainContent_gv_dr_AATI_5">110.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_AATI_5" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_AATI_5"><span id="MainContent_gv_currency_AATI_5">(USD)<br/></span><span id="MainContent_gv_rp_AATI_5"><span style=' color: Red'>1,133.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_AATI_5" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_AATI_5"><span id="MainContent_gv_gmbu_AATI_5"><span style=' color: Black'>43.64%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_AATI_5" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_AATI_5"><span id="MainContent_gv_qw_AATI_5" title="Plant(s)：1100
+Cost(Lowest)：20093.1100 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_SIN_5">
+					<tr id="MainContent_gv_row1_SIN_5" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_SIN_5"><span id="MainContent_gv_dr_SIN_5">110.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_SIN_5" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_SIN_5"><span id="MainContent_gv_currency_SIN_5">(USD)<br/></span><span id="MainContent_gv_rp_SIN_5"><span style=' color: Red'>1,133.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_SIN_5" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_SIN_5"><span id="MainContent_gv_gmbu_SIN_5"><span style=' color: Black'>43.64%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_SIN_5" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_SIN_5"><span id="MainContent_gv_qw_SIN_5" title="Plant(s)：1100
+Cost(Lowest)：20093.1100 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_CHN_5">
+					<tr id="MainContent_gv_row1_CHN_5" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_CHN_5"><span id="MainContent_gv_dr_CHN_5">100.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_CHN_5" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_CHN_5"><span id="MainContent_gv_currency_CHN_5">(RMB)<br/></span><span id="MainContent_gv_rp_CHN_5"><span style=' color: Red'>7,286.91</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_CHN_5" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_CHN_5"><span id="MainContent_gv_gmbu_CHN_5"><span style=' color: Black'>39.13%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_CHN_5" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_CHN_5"><span id="MainContent_gv_qw_CHN_5" title="Plant(s)：1100
+Cost(Lowest)：20093.1100 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_EMEA_5">
+					<tr id="MainContent_gv_row1_EMEA_5" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_EMEA_5"><span id="MainContent_gv_dr_EMEA_5">110.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_EMEA_5" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_EMEA_5"><span id="MainContent_gv_currency_EMEA_5">(USD)<br/></span><span id="MainContent_gv_rp_EMEA_5"><span style=' color: Red'>1,133.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_EMEA_5" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_EMEA_5"><span id="MainContent_gv_gmbu_EMEA_5"><span style=' color: Black'>43.64%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_EMEA_5" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_EMEA_5"><span id="MainContent_gv_qw_EMEA_5" title="Plant(s)：1100
+Cost(Lowest)：20093.1100 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_JAPAN_5">
+					<tr id="MainContent_gv_row1_JAPAN_5" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_JAPAN_5"><span id="MainContent_gv_dr_JAPAN_5">105.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_JAPAN_5" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_JAPAN_5"><span id="MainContent_gv_currency_JAPAN_5">(JPY)<br/></span><span id="MainContent_gv_rp_JAPAN_5"><span style=' color: Red'>169,100.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_JAPAN_5" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_JAPAN_5"><span id="MainContent_gv_gmbu_JAPAN_5"><span style=' color: Black'>41.92%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_JAPAN_5" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_JAPAN_5"><span id="MainContent_gv_qw_JAPAN_5" title="Plant(s)：1100
+Cost(Lowest)：20093.1100 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_KOREA_5">
+					<tr id="MainContent_gv_row1_KOREA_5" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_KOREA_5"><span id="MainContent_gv_dr_KOREA_5">100.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_KOREA_5" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_KOREA_5"><span id="MainContent_gv_currency_KOREA_5">(USD)<br/></span><span id="MainContent_gv_rp_KOREA_5"><span style=' color: Red'>1,030.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_KOREA_5" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_KOREA_5"><span id="MainContent_gv_gmbu_KOREA_5"><span style=' color: Black'>38.01%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_KOREA_5" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_KOREA_5"><span id="MainContent_gv_qw_KOREA_5" title="Plant(s)：1100
+Cost(Lowest)：20093.1100 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_TWN_5">
+					<tr id="MainContent_gv_row1_TWN_5" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_TWN_5"><span id="MainContent_gv_dr_TWN_5">100.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_TWN_5" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_TWN_5"><span id="MainContent_gv_currency_TWN_5">(NTD)<br/></span><span id="MainContent_gv_rp_TWN_5"><span style=' color: Red'>32,350.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_TWN_5" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_TWN_5"><span id="MainContent_gv_gmbu_TWN_5"><span style=' color: Black'>37.89%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_TWN_5" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_TWN_5"><span id="MainContent_gv_qw_TWN_5" title="Plant(s)：1100
+Cost(Lowest)：20093.1100 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_ANZ_5">
+					<tr id="MainContent_gv_row1_ANZ_5" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_ANZ_5"><span id="MainContent_gv_dr_ANZ_5">110.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_ANZ_5" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_ANZ_5"><span id="MainContent_gv_currency_ANZ_5">(USD)<br/></span><span id="MainContent_gv_rp_ANZ_5"><span style=' color: Red'>1,133.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_ANZ_5" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_ANZ_5"><span id="MainContent_gv_gmbu_ANZ_5"><span style=' color: Black'>43.64%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_ANZ_5" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_ANZ_5"><span id="MainContent_gv_qw_ANZ_5" title="Plant(s)：1100
+Cost(Lowest)：20093.1100 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td><td align="center" style="background-color:#99FF66;"><table id="MainContent_gv_table_ADI_5">
+					<tr id="MainContent_gv_row1_ADI_5" style="background-color:#99FF66;">
+						<td id="MainContent_gv_cell1_ADI_5"><span id="MainContent_gv_dr_ADI_5">110.00%<br/></span></td>
+					</tr><tr id="MainContent_gv_row2_ADI_5" style="background-color:#FFFF66;">
+						<td id="MainContent_gv_cell2_ADI_5"><span id="MainContent_gv_currency_ADI_5">(USD)<br/></span><span id="MainContent_gv_rp_ADI_5"><span style=' color: Red'>1,133.00</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row3_ADI_5" style="background-color:#00BBFF;">
+						<td id="MainContent_gv_cell3_ADI_5"><span id="MainContent_gv_gmbu_ADI_5"><span style=' color: Black'>43.64%</span><br/></span></td>
+					</tr><tr id="MainContent_gv_row4_ADI_5" style="color:#0000FF;">
+						<td id="MainContent_gv_cell4_ADI_5"><span id="MainContent_gv_qw_ADI_5" title="Plant(s)：1100
+Cost(Lowest)：20093.1100 (TWD)
+
+CAUTION! This is NOT the SBU Gross Margin.
+請注意！此處的利潤率是SBU對RBU的內部移轉價格利潤率，其分母為RBU price (即內部移轉價格)，並非通常意義上的毛利率，以客戶售價為分母，因此，這個利潤率並非SBU Gross Margin。" style="font-weight:bold;display: block; text-align: center; width: 100%;">(i)</span></td>
+					</tr>
+				</table></td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+    <br />
+    <div id="MainContent_UpdatePanel1">
+	
+            
+        
+</div>
+    <br />
+    <input type="submit" name="ctl00$MainContent$btn_edit" value="Move to &#39;Set RBU Price&#39;" id="MainContent_btn_edit" />
+    <input type="hidden" name="ctl00$MainContent$hf_displayAll" id="MainContent_hf_displayAll" value="false" />
+
+
+            </div>
+            <div class="clear">
+            </div>
+        </div>
+        <div class="footer">
+            <table width="100%" cellspacing="0" cellpadding="0" border="0" background='/img/f-back.gif' style="background-repeat: repeat-x">
+                <tbody>
+                    <tr>
+                        <td align="center">
+                            <img id="Image1" src="../img/footer.gif" />
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+    
+
+<script type="text/javascript">
+//<![CDATA[
+(function() {var fn = function() {$get("MainContent_ToolkitScriptManager_HiddenField").value = '';Sys.Application.remove_init(fn);};Sys.Application.add_init(fn);})();Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.CalendarBehavior, {"format":"yyyy-MM-dd","id":"MainContent_txt_buildDateB_CalendarExtender"}, null, null, $get("MainContent_txt_buildDateB"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.CalendarBehavior, {"format":"yyyy-MM-dd","id":"MainContent_CalendarExtender1"}, null, null, $get("MainContent_TBSD"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.CalendarBehavior, {"format":"yyyy-MM-dd","id":"MainContent_CalendarExtender2"}, null, null, $get("MainContent_TBED"));
+});
+//]]>
+</script>
+</form>
+    <span style='display: none;'><a href='http://apycom.com/' target='_blank'>Apycom jQuery Menus</a></span>
+
+</body>
+</html>

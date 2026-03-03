@@ -1,0 +1,171 @@
+
+    <script type="text/javascript">
+        try {
+            if ('False'.toLowerCase() == 'true') {
+                var documentDomain = '';
+                !!documentDomain && (document.domain = documentDomain);
+            }
+        }
+        catch (ex) {
+        }
+
+        //解决 IE8 不支持console
+        window.console = window.console || (function () {
+            var c = {}; c.log = c.warn = c.debug = c.info = c.error = c.time = c.dir = c.profile
+            = c.clear = c.exception = c.trace = c.assert = function () { };
+            return c;
+        })();
+    </script>
+
+
+
+<!DOCTYPE html>
+<!--[if lte IE 7]><html id="html" class="ie oldie ie7" lang="en"><![endif]-->
+<!--[if IE 8]><html id="html" class="ie oldie ie8" lang="en"><![endif]-->
+<!--[if IE 9]><html id="html" class="ie ie9" lang="en"><![endif]-->
+<!--[if !IE]>-->
+<html id="html" lang="en">
+<!--<![endif]-->
+<head>
+    <meta charset="utf-8" />
+    <title>Enterprise Information Portal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- Favicons -->
+    <link rel="apple-touch-icon-precomposed" href="/Gaia/Content/images/ico/apple-touch-icon-precomposed.png">
+    
+    <link rel="icon" href="/Gaia/favicon.ico" type="image/x-icon" />
+    <link rel="shortcut icon" href="/Gaia/favicon.ico" type="image/x-icon" />
+    <link rel="bookmark" href="/Gaia/favicon.ico"type="image/x-icon" />
+
+    <link href="/Gaia/Content/bootstrap.min.css?v=2018.3.0806" rel="stylesheet"/>
+    <link href="/Gaia/Content/bg-login.min.css?v=2018.3.0806" rel="stylesheet"/>
+    <script>
+        if (top != self) {
+            try
+            {                
+                // detect cross domain
+                if(top.location.host)
+                    top.location = self.location;
+            }
+            catch(ex)
+            {
+                ;
+            }
+        }
+    </script>
+
+</head>
+<body class="bg-body bg-logon-body">
+    <div class="layout">
+        <div class="bg-header" id="bg-header">
+            <div id="bg-header-inner" class="bg-header-inner">
+                <div class="clearfix bg-nav">
+                    <a class="bg-nav-logo" href="/Gaia/portal"></a>
+                </div>
+            </div>
+        </div>
+        <div class="bg-container">
+            <div class="bg-logon-banner">
+                <img src="../Content/images/home/logo.png?v=2018.3.0806" alt="" />
+            </div>
+            <h1 class="bg-logon-title">
+                <span class="product">Enterprise Information Portal</span>
+            </h1>
+            <div class="bg-logon-content">
+                <form method="post" id="frmLogon" role="form" class="form-horizontal">
+                    <p class="form-control-static bg-logon-tip">請使用您的網域帳號與密碼登入EIP系統。例如：名.姓</p>
+                    <div class="form-group">
+                        <div class="col-sm-12">
+                            <div class="input-group">
+                                <input class="form-control" id="account" name="account" type="text" />
+                                <span class="placeholder" id="account_INPUT_IDENTITY" data-bind="click:focus($('#account'))">帳號</span>
+                                <div class="input-group-addon"><span class="glyphicon glyphicon-user"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-12">
+                            <div class="input-group">
+                                <input class="form-control" id="password" name="password" type="password" autocomplete="off" />
+                                <span class="placeholder" id="password_INPUT_IDENTITY" data-bind="click:focus($('#password'))">密碼</span>
+                                <div class="input-group-addon"><span class="glyphicon glyphicon-lock"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group ctVcode" style="display: none" data-bind=" visible: isShowVcode">
+                        <div class="col-sm-12">
+                            <div class="bg-controls">
+                                <input class="form-control" data-bind="value: vcode" name="VCode" type="text" maxlength="5" />
+                                <span class="placeholder" id="vcode_INPUT_IDENTITY" data-bind="click:focus($('[name=\'VCode\']'))">驗證碼</span>
+                                <div class="bg-addon">
+                                    <img id="vfcode" class="vfcode" data-bind="click: onChangeVCode, attr: { src: vcodeSrc }"
+                title="看不清楚？ 換一個" style="cursor: pointer; border: 1px solid #e4eef9;" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-error-area" id="error"></div>
+                    <button type="button" class="btn btn-primary btn-lg btn-block" data-bind="enable: enable,text:enable()?'登入    ':'正在登入...    ', click: onLogon">
+                    </button>
+                    <div class="links">
+                                                                    </div>
+                    <div id="otpWindow" class="bg-otp-window modal fade" tabindex="-1" role="dialog" aria-labelledby="otpTitle" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                    <h4 class="modal-title">請輸入動態密碼</h4>
+                                </div>
+                                <div class="cvOtp modal-body">
+                                    <input class="input-otp form-control" name="otpCode" data-bind="value: otpCode" type="text" maxlength="6" />
+                                    <p class="cvOtpMsg"></p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="submit" id="btnOtpLogon" class="btn btn-defaul cvOtpLogon" data-bind="click: onOtpLogon">確認</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <input id="permanentId" type="hidden" value="ed0cbe0c3d8c440aa2db337ed34c731f20260226080714" />
+                </form>
+            </div>
+        </div>
+        <div class="bg-footer">
+            Copyright @2026, ADLINKTECH. All rights reserved.
+        </div>
+    </div>
+    <script src="/Gaia/Scripts/Lib/jquery.min.js?v=2018.3.0806"></script>
+    <!--[if lt IE 9]>
+        <script src="/Gaia/Scripts/Lib/respond.min.js?v=2018.3.0806"></script>
+    <![endif]-->
+    <script src="/Gaia/Scripts/Lib/Plugins/knockout.min.js?v=2018.3.0806"></script>
+    <script src="/Gaia/Scripts/Lib/Plugins/bootstrap.min.js?v=2018.3.0806"></script>
+    <script src="/Gaia/Scripts/Account/bg.logon.js?v=2018.3.0806"></script>
+
+    <script type="text/javascript">
+        $(function () {
+            window.baseUrl = "/Gaia";window.cultureCode = "zh-TW";window.isIPadApp = false;
+
+            bg.logon.init( 
+                $.extend({
+                    locale: {
+                        otpNotEmpty: "必須輸入動態密碼",
+                        accountMustInput: '帳號不能為空',
+                        pswMustInput: '密碼不能為空',
+                        vcodeMustInput: '驗證碼不能為空',
+                        ntLogonFaild:'NT 登入失敗',
+                        redirecting:'正在為您跳轉，請稍後...',
+                        // 授权已经过期, {0}天后将无法使用, 请管理员联系明基逐鹿. 谢谢!
+                        // 备注：临时方案，因此未实现多语言。
+                        licenseExpired: "The license has expired and will not be available after {0} days. Please contact BenQ Guru by your administrator. Thanks."
+                    }
+                },
+                {"userName":null,"password":null,"otp":null,"needOtp":false,"isShowVcode":false,"vCode":null,"returnUrl":"https://eip.adlinktech.com/Gaia/portal/TPHQ","logonMode":"Normal"}
+                )
+            );
+        });
+    </script>
+</body>
+</html>
+
+

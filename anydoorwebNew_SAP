@@ -1,0 +1,119 @@
+
+
+
+
+<!DOCTYPE html>
+<html ng-app="app">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="renderer" content="webkit">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>ADLINK Anydoor</title>
+    <!-- Bootstrap Core CSS -->
+    <link href="/AnydoorWebNew/Content/sbadmin/bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- MetisMenu CSS -->
+    <link href="/AnydoorWebNew/Content/sbadmin/bower_components/metisMenu/dist/metisMenu.min.css" rel="stylesheet">
+    <!-- Timeline CSS -->
+    <link href="/AnydoorWebNew/Content/sbadmin/dist/css/timeline.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="/AnydoorWebNew/Content/sbadmin/dist/css/sb-admin-2.css" rel="stylesheet">
+    <!-- Morris Charts CSS -->
+    <link href="/AnydoorWebNew/Content/sbadmin/bower_components/morrisjs/morris.css" rel="stylesheet">
+    <!-- Custom Fonts -->
+    <link href="/AnydoorWebNew/Content/sbadmin/bower_components/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <script type="text/javascript">
+        var memberID = 36;
+    </script>
+
+    <script src="/AnydoorWebNew/Scripts/jquery-1.10.2.js"></script>
+    <script src="/AnydoorWebNew/Scripts/jquery.blockUI.js"></script>
+    <script src="/AnydoorWebNew/Scripts/angular.js"></script>
+    <script src="/AnydoorWebNew/Scripts/JSController/JSParameter.js"></script>
+    <script src="/AnydoorWebNew/Scripts/JSController/Home/Index.js?s=20230407064746"></script>
+    <script src="/AnydoorWebNew/JSResource/JSValue?s=46079.6382021412"></script>
+</head>
+<body ng-controller="HomeIndexCtrl" ng-init="Init()">
+    <div id="wrapper">
+        <!-- Navigation -->
+        <nav class="navbar navbar-default navbar-static-top" role="navigation" style="margin-bottom: 0">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <img class="navbar-brand" src="/AnydoorWebNew/Content/Images/logo_color.png" style="margin-top:5px;margin-left:20px;width:133px;height:55px;" />
+                <span class="navbar-brand" style="font-size:x-large;margin-top:8px;">
+                    <label>{{SystemObj.PlatformName}}</label>
+                    <label ng-if="!!SystemObj.SystemName"><i class="fa fa-arrow-right"></i> {{SystemObj.SystemName}}</label>
+                    <label ng-if="!!SystemObj.CategoryName"><i class="fa fa-arrow-right"></i> {{SystemObj.CategoryName}}</label>
+                </span>
+            </div>
+            <ul class="nav navbar-top-links navbar-right">
+                <li>
+                    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                        vincentsj.chiu
+                    </a>
+                </li>
+            </ul>
+            <!-- /.navbar-header -->
+            
+            <!-- /.navbar-top-links -->
+            <div class="navbar-default sidebar" role="navigation">
+                <div class="sidebar-nav navbar-collapse">
+                    <ul class="nav" id="side-menu">
+                        <li class="sidebar-search">
+                            <div class="input-group custom-search-form">
+                                <a>Please choose your system：</a>
+                                <select id="SystemList" name="SystemList" ng-options="item as item.SystemName for item in SystemList" ng-model="SystemSelect" ng-change="SystemChange()">
+                                    
+                                </select>
+                            </div>
+                            <!-- /input-group -->
+                        </li>
+                        <li ng-repeat="category in categoryToFilter() | filter : filterCategory">
+                            <a href="#"><i class="fa fa-dashboard fa-fw"></i> {{category.CategoryName}}<span class="fa arrow"></span></a>
+                            <ul class="nav nav-second-level">
+                                <li ng-repeat="item in CategoryItemList | filter:{CategoryID:category.CategoryID}">
+                                    <a style="cursor:pointer" ng-click="OpenItemPage(item)">{{item.SystemCategoryItemName}}</a>
+                                </li>
+                            </ul>
+                        </li>     
+                    </ul>
+                </div>
+                <!-- /.sidebar-collapse -->
+            </div>
+            <!-- /.navbar-static-side -->
+        </nav>
+        <div id="page-wrapper">
+            <div class="row">
+                <iframe id="pageContent" src="/AnydoorWebNew/Home/WhitePage" style="width:100%;height:1000px;"></iframe>
+            </div>           
+        </div>
+        <!-- /#page-wrapper -->
+    </div>
+    <!-- /#wrapper -->
+    <!-- jQuery -->
+    <script src="/AnydoorWebNew/Content/sbadmin/bower_components/jquery/dist/jquery.min.js"></script>
+    <!-- Bootstrap Core JavaScript -->
+    <script src="/AnydoorWebNew/Content/sbadmin/bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+    <!-- Metis Menu Plugin JavaScript -->
+    <script src="/AnydoorWebNew/Content/sbadmin/bower_components/metisMenu/dist/metisMenu.min.js"></script>
+    <!-- Morris Charts JavaScript -->
+    <script src="/AnydoorWebNew/Content/sbadmin/bower_components/raphael/raphael-min.js"></script>
+    <!-- Custom Theme JavaScript -->
+    <script src="/AnydoorWebNew/Content/sbadmin/dist/js/sb-admin-2.js"></script>
+</body>
+</html>
