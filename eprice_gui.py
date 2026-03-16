@@ -42,6 +42,7 @@ def _get_or_create_driver():
             _driver = None
     options = webdriver.ChromeOptions()
     options.add_argument('--disable-extensions')
+    options.add_argument('--remote-debugging-port=0')
     if _chromedriver_path is None:
         _chromedriver_path = ChromeDriverManager().install()
     _driver = webdriver.Chrome(
@@ -104,7 +105,9 @@ def _render_results():
         bp_cur_label = f" ({currency})" if currency else ""
 
         # 將每筆 (cost, currency) 依目前匯率換算 NTD，取最大者
-        ch_display = "-"
+        pn_first = pn_ns.split("\n")[0].strip()
+        is_92 = pn_first.startswith("92")
+        ch_display = "外購品直接參考Cost (Lowest)" if is_92 else "-"
         best_cost_val = None
         best_cost_cur = ""
         if ch_entries:
@@ -119,10 +122,19 @@ def _render_results():
                 ch_cur_label = f" ({best_cost_cur})" if best_cost_cur else ""
                 ch_display = f"{best_cost_val:.2f}{ch_cur_label}"
 
+        # 外購品 (92開頭) 且無 Cost(Highest) 時，E2E 改用 Cost(Lowest) 計算
+        e2e_cost_val = best_cost_val
+        e2e_cost_cur = best_cost_cur
+        if is_92 and best_cost_val is None and cost_lowest:
+            cl_num = _parse_numeric(cost_lowest)
+            if cl_num is not None:
+                e2e_cost_val = cl_num
+                e2e_cost_cur = "NTD"
+
         e2e_display = "-"
-        if selling_price is not None and selling_price > 0 and best_cost_val is not None:
+        if selling_price is not None and selling_price > 0 and e2e_cost_val is not None:
             sp_ntd = _to_ntd(selling_price, sel_currency, usd_rate, rmb_rate)
-            cost_ntd = _to_ntd(best_cost_val, best_cost_cur, usd_rate, rmb_rate)
+            cost_ntd = _to_ntd(e2e_cost_val, e2e_cost_cur, usd_rate, rmb_rate)
             if sp_ntd > 0:
                 e2e = (sp_ntd - cost_ntd) / sp_ntd * 100
                 e2e_display = f"{e2e:.1f}%  [NTD基準]"
@@ -511,6 +523,22 @@ def _extract_product_name_from_cell(cell_text):
     return extracted, before_g
 
 
+def _cell_matches_product(cell_text, want):
+    """
+    判斷欄位文字是否匹配搜尋的產品名稱。
+    先用 _extract_product_name_from_cell 取最後 token 比對；
+    若不符，再檢查 want 是否出現在清理後文字的 token 中（處理多行含 spec 的情況，
+    例如 "92-97108-0020\\nNuDAM ND-6150\\n8DI, 8DO, Modbus RTU"）。
+    回傳 (是否匹配, before_g 字串)。
+    """
+    extracted, before_g = _extract_product_name_from_cell(cell_text)
+    if extracted == want:
+        return True, before_g
+    if want in before_g.split():
+        return True, before_g
+    return False, before_g
+
+
 def run_query():
     global _product_cache, _anydoor_iframe_ready
     username = entry_user.get().strip()
@@ -668,10 +696,11 @@ def run_query():
                 continue
             try:
                 pn_ns = row_data[PRODUCT_COL]["t"]
-                extracted_name, before_g = _extract_product_name_from_cell(pn_ns)
-                if extracted_name != product_name:
+                matched, before_g = _cell_matches_product(pn_ns, product_name)
+                if not matched:
                     continue
-                prefix = before_g.rstrip()[:-len(product_name)].rstrip() if before_g.rstrip().endswith(product_name) else ""
+                idx = before_g.find(product_name)
+                prefix = before_g[:idx].rstrip() if idx > 0 else ""
                 if prefix and (" for " in prefix or "kit" in prefix.lower()):
                     continue
                 currency = row_data[currency_col_index]["t"] if currency_col_index is not None else ""

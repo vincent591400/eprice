@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Tuple
 from urllib.parse import quote
 
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, render_template, jsonify, Response, stream_with_context
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -38,7 +38,7 @@ def _parse_numeric(s):
     return float(m.group().replace(",", "")) if m else None
 
 
-def _fetch_cost_highest_from_anydoor(driver, product_numbers, username, password, period_start="202501"):
+def _fetch_cost_highest_from_anydoor(driver, product_numbers, username, password, period_start="202501", on_progress=None):
     """
     1. 先登入 EIP  2. 進 anydoor SAP Report  3. 逐 PN 各查一次
     回傳 (dict, diag_msg)
@@ -53,6 +53,8 @@ def _fetch_cost_highest_from_anydoor(driver, product_numbers, username, password
 
         # ════ EIP 登入 ════
         step = "EIP-Login: 開啟"
+        if on_progress:
+            on_progress(3, "登入 EIP 中…")
         driver.get(EIP_LOGIN_URL)
 
         if "Account/Logon" in driver.current_url:
@@ -82,6 +84,8 @@ def _fetch_cost_highest_from_anydoor(driver, product_numbers, username, password
 
         # ════ 進入 anydoor（URL 嵌入帳密通過 HTTP 認證）════
         step = "Step1: 開啟 anydoor (HTTP auth)"
+        if on_progress:
+            on_progress(3, "開啟 Anydoor…")
         safe_user = quote(username, safe="")
         safe_pass = quote(password, safe="")
         driver.get(
@@ -111,6 +115,8 @@ def _fetch_cost_highest_from_anydoor(driver, product_numbers, username, password
         time.sleep(0.5)
 
         step = "Step3: 點擊報表連結"
+        if on_progress:
+            on_progress(3, "開啟 SAP Report…")
         report_link = wait.until(
             EC.presence_of_element_located(
                 (By.XPATH,
@@ -132,6 +138,8 @@ def _fetch_cost_highest_from_anydoor(driver, product_numbers, username, password
         time.sleep(0.5)
 
         step = "Step4: 切換 iframe"
+        if on_progress:
+            on_progress(3, "準備查詢介面…")
         iframe = wait.until(
             EC.presence_of_element_located((By.ID, "pageContent"))
         )
@@ -143,6 +151,8 @@ def _fetch_cost_highest_from_anydoor(driver, product_numbers, username, password
 
         for pn_idx, pn in enumerate(product_numbers):
             pn_label = f"PN[{pn_idx+1}/{len(product_numbers)}] {pn}"
+            if on_progress:
+                on_progress(4, f"查詢 Cost(Highest) ({pn_idx+1}/{len(product_numbers)})")
             step = f"{pn_label}: 填表單"
 
             ps_input = wait.until(
@@ -262,6 +272,7 @@ def _fetch_cost_highest_from_anydoor(driver, product_numbers, username, password
 
             total_data_rows = _collect_rows(tbl["d"])
 
+            page_num = 1
             while True:
                 try:
                     next_info = driver.execute_script("""
@@ -281,6 +292,10 @@ def _fetch_cost_highest_from_anydoor(driver, product_numbers, username, password
                     """)
                     if not next_info:
                         break
+                    page_num += 1
+                    # 每翻一頁就送出進度，避免長時間無訊息導致 SSE 逾時
+                    if on_progress:
+                        on_progress(4, f"查詢 Cost(Highest) ({pn_idx+1}/{len(product_numbers)}) - 第{page_num}頁")
                     time.sleep(0.5)
                     page_data = driver.execute_script("""
                         var rows = document.querySelectorAll('table tbody tr');
@@ -339,13 +354,36 @@ def _extract_product_name_from_cell(cell_text):
     return extracted, before_g
 
 
-def fetch_base_price(username: str, password: str, product_name: str, period_start: str = "202501") -> Tuple[bool, str, list]:
+def _cell_matches_product(cell_text, want):
+    """
+    判斷欄位文字是否匹配搜尋的產品名稱。
+    先用 _extract_product_name_from_cell 取最後 token 比對；
+    若不符，再檢查 want 是否出現在清理後文字的 token 中（處理多行含 spec 的情況，
+    例如 "92-97108-0020\\nNuDAM ND-6150\\n8DI, 8DO, Modbus RTU"）。
+    回傳 (是否匹配, before_g 字串)。
+    """
+    extracted, before_g = _extract_product_name_from_cell(cell_text)
+    if extracted == want:
+        return True, before_g
+    # 多行欄位：want 可能不在最後一個 token，改檢查是否存在於 token 列表中
+    if want in before_g.split():
+        return True, before_g
+    return False, before_g
+
+
+def fetch_base_price(username: str, password: str, product_name: str, period_start: str = "202501", on_progress=None) -> Tuple[bool, str, list]:
     """
     使用 Selenium 登入並查詢，列出所有結果的 ProductNumber/Name/Spec 與 Base Price。
     回傳 (成功與否, 錯誤訊息若失敗, 產品列表 [{product_number_name_spec, base_price}] )
+    on_progress: callback(step_index, step_label) 用於回報進度
     """
+    def progress(step_idx, label):
+        if on_progress:
+            on_progress(step_idx, label)
+
     driver = None
     try:
+        progress(0, "啟動瀏覽器")
         options = webdriver.ChromeOptions()
         options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
@@ -354,6 +392,7 @@ def fetch_base_price(username: str, password: str, product_name: str, period_sta
         options.add_argument("--window-size=1920,1080")
         options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_argument("--auth-server-allowlist=*.adlinktech.com")
+        options.add_argument("--remote-debugging-port=0")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
 
         driver = webdriver.Chrome(
@@ -364,6 +403,7 @@ def fetch_base_price(username: str, password: str, product_name: str, period_sta
         wait = WebDriverWait(driver, 20)
 
         # 1. 登入
+        progress(1, "登入 ePrice")
         driver.get(LOGIN_URL)
         user_input = wait.until(
             EC.presence_of_element_located((By.ID, "TB_Username"))
@@ -378,6 +418,7 @@ def fetch_base_price(username: str, password: str, product_name: str, period_sta
         wait.until(lambda d: "Login.aspx" not in d.current_url)
 
         # 2. 價目頁（先等 Product Name 輸入框出現，不強制等 Grid）
+        progress(2, "搜尋產品 Base Price")
         driver.get(PRICE_URL)
         wait.until(
             EC.presence_of_element_located(
@@ -494,10 +535,12 @@ def fetch_base_price(username: str, password: str, product_name: str, period_sta
             if row_data[quantity_col_index]["t"] != "1":
                 continue
             pn_ns = row_data[PRODUCT_COL]["t"]
-            extracted_name, before_g = _extract_product_name_from_cell(pn_ns)
-            if extracted_name != want:
+            matched, before_g = _cell_matches_product(pn_ns, want)
+            if not matched:
                 continue
-            prefix = before_g.rstrip()[:-len(want)].rstrip() if before_g.rstrip().endswith(want) else ""
+            # 取 want 在 before_g 中的位置來判斷 prefix
+            idx = before_g.find(want)
+            prefix = before_g[:idx].rstrip() if idx > 0 else ""
             if prefix and (" for " in prefix or "kit" in prefix.lower()):
                 continue
             currency = row_data[currency_col_index]["t"] if currency_col_index is not None else ""
@@ -525,13 +568,15 @@ def fetch_base_price(username: str, password: str, product_name: str, period_sta
             return False, "查無產品價格資料，或結果表無 Base Price 欄位。", []
 
         # ── 查詢 anydoor SAP Report 取得 Cost(highest) ──
+        progress(3, "登入 EIP / Anydoor")
         unique_pns = list({
             p["product_number_name_spec"].split("\n")[0].strip()
             for p in product_list
             if p["product_number_name_spec"].strip()
         })
         cost_highest_map, anydoor_diag = _fetch_cost_highest_from_anydoor(
-            driver, unique_pns, username, password, period_start=period_start
+            driver, unique_pns, username, password, period_start=period_start,
+            on_progress=on_progress,
         )
         for p in product_list:
             pn_key = p["product_number_name_spec"].split("\n")[0].strip()
@@ -539,6 +584,8 @@ def fetch_base_price(username: str, password: str, product_name: str, period_sta
             p["cost_highest_entries"] = [
                 {"cost": cv, "currency": cc} for cv, cc in ch_entries
             ]
+
+        progress(5, "整理結果")
 
         warn = ""
         if anydoor_diag:
@@ -551,7 +598,11 @@ def fetch_base_price(username: str, password: str, product_name: str, period_sta
     finally:
         if driver:
             try:
-                driver.quit()
+                # 用執行緒限制 driver.quit() 最多 15 秒，避免 Chrome 關閉卡住
+                import threading as _thr
+                quit_thread = _thr.Thread(target=driver.quit, daemon=True)
+                quit_thread.start()
+                quit_thread.join(timeout=15)
             except Exception:
                 pass
 
@@ -559,6 +610,86 @@ def fetch_base_price(username: str, password: str, product_name: str, period_sta
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/api/query_stream", methods=["POST"])
+def api_query_stream():
+    """SSE 串流版查詢，即時回報進度步驟。"""
+    data = request.get_json(force=True, silent=True) or {}
+    username = (data.get("username") or "").strip()
+    password = (data.get("password") or "").strip()
+    product_name = (data.get("product_name") or "").strip()
+    period_start = (data.get("period_start") or "").strip() or "202501"
+
+    if not username or not password or not product_name:
+        def err_stream():
+            payload = json.dumps({"type": "error", "error": "請填寫 User Name、Password 與 Product Name。"})
+            yield f"data: {payload}\n\n"
+        return Response(stream_with_context(err_stream()), content_type="text/event-stream")
+
+    import queue, threading
+    progress_queue = queue.Queue()
+
+    def on_progress(step_idx, label):
+        progress_queue.put(("progress", step_idx, label))
+
+    def worker():
+        try:
+            ok, error_msg, product_list = fetch_base_price(
+                username, password, product_name, period_start=period_start, on_progress=on_progress
+            )
+            if ok:
+                progress_queue.put(("done", {
+                    "success": True,
+                    "products": product_list,
+                    "count": len(product_list),
+                    "error": None,
+                    "warning": error_msg if error_msg else None,
+                }))
+            else:
+                progress_queue.put(("done", {
+                    "success": False,
+                    "error": error_msg,
+                    "products": [],
+                    "count": 0,
+                }))
+        except Exception as ex:
+            progress_queue.put(("done", {
+                "success": False,
+                "error": str(ex),
+                "products": [],
+                "count": 0,
+            }))
+
+    t = threading.Thread(target=worker, daemon=True)
+    t.start()
+
+    def generate():
+        total_wait = 0
+        max_wait = 300          # 總計最多等 5 分鐘
+        poll_interval = 10      # 每 10 秒檢查一次
+        while True:
+            try:
+                msg = progress_queue.get(timeout=poll_interval)
+                total_wait = 0  # 收到訊息就重置計時
+            except queue.Empty:
+                total_wait += poll_interval
+                if total_wait >= max_wait:
+                    yield f"data: {json.dumps({'type': 'error', 'error': '查詢逾時（超過 5 分鐘無回應）'})}\n\n"
+                    return
+                # 送出 SSE 心跳，防止連線斷開
+                yield ": keepalive\n\n"
+                continue
+            if msg[0] == "progress":
+                payload = json.dumps({"type": "progress", "step": msg[1], "label": msg[2]})
+                yield f"data: {payload}\n\n"
+            elif msg[0] == "done":
+                result = msg[1]
+                result["type"] = "result"
+                yield f"data: {json.dumps(result)}\n\n"
+                return
+
+    return Response(stream_with_context(generate()), content_type="text/event-stream")
 
 
 @app.route("/api/query", methods=["POST"])

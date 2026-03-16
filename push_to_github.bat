@@ -4,7 +4,7 @@ setlocal
 :: 請先到 https://github.com/new 建立新 repo（例如 eprice）
 :: 建立後將下方 YOUR_USERNAME 和 YOUR_REPO 改成你的 GitHub 帳號與 repo 名稱
 
-set GITHUB_USER=YOUR_USERNAME
+set GITHUB_USER=vincent591400
 set GITHUB_REPO=eprice
 
 if "%GITHUB_USER%"=="YOUR_USERNAME" (

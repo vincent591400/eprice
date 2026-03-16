@@ -193,6 +193,73 @@
     .loading.visible {
       display: block;
     }
+
+    /* ── 步驟進度條 ── */
+    .progress-stepper {
+      display: none;
+      margin-top: 1.25rem;
+      padding: 1rem 1.25rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .progress-stepper.visible {
+      display: block;
+    }
+    .progress-stepper .stepper-title {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.4rem 0;
+      font-size: 0.9rem;
+      color: var(--border);
+      transition: color 0.3s, opacity 0.3s;
+    }
+    .step-item.done {
+      color: var(--success);
+    }
+    .step-item.active {
+      color: var(--accent);
+    }
+    .step-item.pending {
+      color: var(--border);
+    }
+    .step-icon {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      transition: all 0.3s;
+    }
+    .step-item.done .step-icon {
+      background: var(--success);
+      border-color: var(--success);
+      color: #fff;
+    }
+    .step-item.active .step-icon {
+      border-color: var(--accent);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .step-label {
+      flex: 1;
+    }
+    .step-item.active .step-label {
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -241,7 +308,33 @@
       <button type="submit" class="btn" id="btnSubmit">查詢 Base Price</button>
     </form>
 
-    <p class="loading" id="loading">查詢中…</p>
+    <div class="progress-stepper" id="progressStepper">
+      <div class="stepper-title">查詢進度</div>
+      <div class="step-item pending" data-step="0">
+        <div class="step-icon">1</div>
+        <div class="step-label">啟動瀏覽器</div>
+      </div>
+      <div class="step-item pending" data-step="1">
+        <div class="step-icon">2</div>
+        <div class="step-label">登入 ePrice</div>
+      </div>
+      <div class="step-item pending" data-step="2">
+        <div class="step-icon">3</div>
+        <div class="step-label">搜尋產品 Base Price</div>
+      </div>
+      <div class="step-item pending" data-step="3">
+        <div class="step-icon">4</div>
+        <div class="step-label">登入 EIP / Anydoor</div>
+      </div>
+      <div class="step-item pending" data-step="4">
+        <div class="step-icon">5</div>
+        <div class="step-label">查詢 Cost(Highest)</div>
+      </div>
+      <div class="step-item pending" data-step="5">
+        <div class="step-icon">6</div>
+        <div class="step-label">整理結果</div>
+      </div>
+    </div>
 
     <div class="result" id="result"></div>
     <div class="result-list" id="resultList" style="display: none;"></div>
@@ -250,13 +343,41 @@
   <script>
     const form = document.getElementById("form");
     const btnSubmit = document.getElementById("btnSubmit");
-    const loading = document.getElementById("loading");
     const resultEl = document.getElementById("result");
+    const stepper = document.getElementById("progressStepper");
+    const stepItems = stepper.querySelectorAll(".step-item");
     let currentProducts = [];
 
-    function showLoading(show) {
-      loading.classList.toggle("visible", show);
+    function showStepper(show) {
+      stepper.classList.toggle("visible", show);
       btnSubmit.disabled = show;
+      if (show) {
+        stepItems.forEach(function(el) {
+          el.className = "step-item pending";
+        });
+      }
+    }
+
+    function updateStep(stepIdx, label) {
+      stepItems.forEach(function(el) {
+        var idx = parseInt(el.getAttribute("data-step"));
+        if (idx < stepIdx) {
+          el.className = "step-item done";
+          el.querySelector(".step-icon").textContent = "\u2713";
+        } else if (idx === stepIdx) {
+          el.className = "step-item active";
+          if (label) el.querySelector(".step-label").textContent = label;
+        } else {
+          el.className = "step-item pending";
+        }
+      });
+    }
+
+    function markAllDone() {
+      stepItems.forEach(function(el) {
+        el.className = "step-item done";
+        el.querySelector(".step-icon").textContent = "\u2713";
+      });
     }
 
     function parseNumeric(s) {
@@ -305,7 +426,10 @@
           const bpCur = p.currency ? " (" + p.currency + ")" : "";
 
           // 依目前匯率將每筆 (cost, currency) 換算 NTD 取最大
-          var bestCostVal = null, bestCostCur = "", costHLabel = "-";
+          var pnFirst = (p.product_number_name_spec || "").split("\n")[0].trim();
+          var is92 = pnFirst.startsWith("92");
+          var defaultCostH = is92 ? "外購品直接參考Cost (Lowest)" : "此版本尚未生產過";
+          var bestCostVal = null, bestCostCur = "", costHLabel = defaultCostH;
           var entries = p.cost_highest_entries || [];
           if (entries.length) {
             var bestNTD = null;
@@ -324,13 +448,24 @@
             }
           }
 
+          // 外購品 (92開頭) 且無 Cost(Highest) 時，E2E 改用 Cost(Lowest) 計算
+          var e2eCostVal = bestCostVal;
+          var e2eCostCur = bestCostCur;
+          if (is92 && bestCostVal === null) {
+            var clNum = parseFloat((p.cost_lowest || "").replace(/,/g, ""));
+            if (!isNaN(clNum)) {
+              e2eCostVal = clNum;
+              e2eCostCur = "NTD";
+            }
+          }
+
           let spDisplay = "-";
           let e2eDisplay = "-";
           if (sellingPrice !== null && sellingPrice > 0) {
             spDisplay = sellingPrice.toFixed(2) + " " + selCurrency;
-            if (bestCostVal !== null) {
+            if (e2eCostVal !== null) {
               const spNTD = toNTD(sellingPrice, selCurrency, usdRate, rmbRate);
-              const costNTD = toNTD(bestCostVal, bestCostCur, usdRate, rmbRate);
+              const costNTD = toNTD(e2eCostVal, e2eCostCur, usdRate, rmbRate);
               if (spNTD > 0) {
                 const e2e = (spNTD - costNTD) / spNTD * 100;
                 e2eDisplay = e2e.toFixed(1) + "%";
@@ -367,32 +502,64 @@
         return;
       }
 
-      showLoading(true);
+      showStepper(true);
       resultEl.classList.remove("visible");
       document.getElementById("resultList").style.display = "none";
       currentProducts = [];
 
       try {
-        const res = await fetch("/api/query", {
+        const res = await fetch("/api/query_stream", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, password, product_name, period_start }),
         });
-        const data = await res.json();
 
-        if (data.success) {
-          currentProducts = data.products || [];
-          renderResults();
-        } else {
-          resultEl.className = "result visible error";
-          resultEl.textContent = data.error || "查詢失敗";
-          document.getElementById("resultList").style.display = "none";
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          let lines = buffer.split("\n");
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const payload = JSON.parse(line.slice(6));
+
+            if (payload.type === "progress") {
+              updateStep(payload.step, payload.label);
+            } else if (payload.type === "result") {
+              markAllDone();
+              setTimeout(function() { showStepper(false); }, 600);
+              if (payload.success) {
+                currentProducts = payload.products || [];
+                renderResults();
+                if (payload.warning) {
+                  var warnEl = document.createElement("div");
+                  warnEl.style.cssText = "margin-top:0.5rem;padding:0.5rem 0.75rem;background:rgba(210,153,34,0.15);border:1px solid rgba(210,153,34,0.4);border-radius:6px;color:#d2992a;font-size:0.85rem;white-space:pre-wrap;";
+                  warnEl.textContent = payload.warning;
+                  document.getElementById("resultList").prepend(warnEl);
+                }
+              } else {
+                resultEl.className = "result visible error";
+                resultEl.textContent = payload.error || "查詢失敗";
+                document.getElementById("resultList").style.display = "none";
+              }
+            } else if (payload.type === "error") {
+              showStepper(false);
+              resultEl.className = "result visible error";
+              resultEl.textContent = payload.error || "查詢失敗";
+            }
+          }
         }
       } catch (err) {
         resultEl.className = "result visible error";
         resultEl.textContent = "連線錯誤：" + (err.message || "請確認後端已啟動");
-      } finally {
-        showLoading(false);
+        showStepper(false);
       }
     });
   </script>
