@@ -177,6 +177,23 @@
       border-bottom: none;
     }
 
+    /* ── BOM 查詢相關 ── */
+    .bom-link {
+      color: var(--accent);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .bom-link:hover {
+      opacity: 0.8;
+    }
+    .bom-section-title {
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
     .result-count {
       color: var(--muted);
       font-size: 0.9rem;
@@ -284,6 +301,13 @@
         <input type="text" id="period_start" name="period_start" value="202501" placeholder="202501" maxlength="6" style="width:120px;" />
       </div>
       <div class="field">
+        <label for="bom_plant">BOM 查詢工廠 <span style="color:var(--muted);font-size:0.82rem;">（點擊結果料號時使用）</span></label>
+        <select id="bom_plant" style="width:180px;padding:0.65rem 0.5rem;font-size:1rem;font-family:inherit;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:8px;outline:none;">
+          <option value="1100">1100-TPMC</option>
+          <option value="2100">2100-SHMC</option>
+        </select>
+      </div>
+      <div class="field">
         <label for="selling_price">Selling Price <span style="color:var(--muted);font-size:0.82rem;">（選填；每行一個對應產品順序，修改後立即重算 E2E%）</span></label>
         <div style="display:flex;gap:0.5rem;align-items:flex-start;">
           <textarea id="selling_price" name="selling_price" placeholder="每行一個，對應產品順序&#10;例如：100.50&#10;85.00" rows="3" style="flex:1;resize:vertical;"></textarea>
@@ -338,6 +362,36 @@
 
     <div class="result" id="result"></div>
     <div class="result-list" id="resultList" style="display: none;"></div>
+
+    <!-- BOM 查詢進度 -->
+    <div class="progress-stepper" id="bomStepper" style="display:none;">
+      <div class="stepper-title">BOM 查詢進度 — <span id="bomStepperPN"></span></div>
+      <div class="step-item pending" data-step="0">
+        <div class="step-icon">1</div>
+        <div class="step-label">啟動瀏覽器</div>
+      </div>
+      <div class="step-item pending" data-step="1">
+        <div class="step-icon">2</div>
+        <div class="step-label">登入 EIP / Anydoor</div>
+      </div>
+      <div class="step-item pending" data-step="2">
+        <div class="step-icon">3</div>
+        <div class="step-label">開啟 BOM with cost</div>
+      </div>
+      <div class="step-item pending" data-step="3">
+        <div class="step-icon">4</div>
+        <div class="step-label">查詢 BOM 資料</div>
+      </div>
+      <div class="step-item pending" data-step="4">
+        <div class="step-icon">5</div>
+        <div class="step-label">篩選 71-/72- 物料</div>
+      </div>
+    </div>
+
+    <!-- BOM 結果 -->
+    <div class="result" id="bomResult"></div>
+    <div class="result-list" id="bomResultList" style="display:none;"></div>
+
   </div>
 
   <script>
@@ -490,7 +544,14 @@
             }
           }
         }
-        html += "<tr><td>" + escapeHtml(p.product_number_name_spec) +
+        // 將料號做成可點擊連結（觸發 BOM 查詢）
+        var pnLines = (p.product_number_name_spec || "").split("\n");
+        var pnFirstLine = pnLines[0].trim();
+        var pnLinkHtml = '<a href="#" class="bom-link" data-pn="' + escapeHtml(pnFirstLine) + '">' + escapeHtml(pnFirstLine) + '</a>';
+        var pnRestHtml = pnLines.slice(1).map(function(l){ return escapeHtml(l); }).join("<br>");
+        var pnCellHtml = pnLinkHtml + (pnRestHtml ? "<br>" + pnRestHtml : "");
+
+        html += "<tr><td>" + pnCellHtml +
                "</td><td>" + escapeHtml(cur) +
                "</td><td>" + escapeHtml(p.base_price) + escapeHtml(bpCur) +
                "</td><td>" + escapeHtml(cost) +
@@ -596,6 +657,159 @@
       })
       .catch(function(err) { console.error("報告產生失敗:", err); });
     }
+
+    // ── BOM 查詢：點擊料號觸發 ──
+    var _bomQuerying = false;
+    var bomStepper = document.getElementById("bomStepper");
+    var bomStepItems = bomStepper.querySelectorAll(".step-item");
+    var bomResultEl = document.getElementById("bomResult");
+    var bomListEl = document.getElementById("bomResultList");
+
+    function showBomStepper(show) {
+      bomStepper.style.display = show ? "block" : "none";
+      bomStepper.classList.toggle("visible", show);
+      if (show) {
+        bomStepItems.forEach(function(el) {
+          el.className = "step-item pending";
+          var idx = parseInt(el.getAttribute("data-step"));
+          el.querySelector(".step-icon").textContent = (idx + 1) + "";
+        });
+      }
+    }
+
+    function updateBomStep(stepIdx, label) {
+      bomStepItems.forEach(function(el) {
+        var idx = parseInt(el.getAttribute("data-step"));
+        if (idx < stepIdx) {
+          el.className = "step-item done";
+          el.querySelector(".step-icon").textContent = "\u2713";
+        } else if (idx === stepIdx) {
+          el.className = "step-item active";
+          if (label) el.querySelector(".step-label").textContent = label;
+        } else {
+          el.className = "step-item pending";
+        }
+      });
+    }
+
+    function markAllBomDone() {
+      bomStepItems.forEach(function(el) {
+        el.className = "step-item done";
+        el.querySelector(".step-icon").textContent = "\u2713";
+      });
+    }
+
+    function renderBomResults(data) {
+      var items = data.bom_items || [];
+      bomResultEl.className = "result visible success";
+      bomResultEl.innerHTML = '<span class="label">BOM 物料（71/72 開頭）— </span>' +
+        '<span class="value">' + escapeHtml(data.pn) + '</span>' +
+        '<span class="label"> / ' + escapeHtml(data.plant) + '  共 </span>' +
+        '<span class="value">' + items.length + '</span><span class="label"> 筆</span>';
+      bomListEl.style.display = "block";
+
+      var html = "<table><thead><tr>" +
+        "<th>PART NO</th><th>Part Spec</th><th>Lead Time</th>" +
+        "<th>Accumu Qty</th><th>Last Purchasing Price</th><th>Local Currency</th>" +
+        "</tr></thead><tbody>";
+      items.forEach(function(item) {
+        html += "<tr><td>" + escapeHtml(item.part_no || "") +
+                "</td><td>" + escapeHtml(item.part_spec || "") +
+                "</td><td>" + escapeHtml(item.lead_time || "") +
+                "</td><td>" + escapeHtml(item.accumu_qty || "") +
+                "</td><td>" + escapeHtml(item.last_purchasing_price || "") +
+                "</td><td>" + escapeHtml(item.local_currency || "") + "</td></tr>";
+      });
+      html += "</tbody></table>";
+      bomListEl.innerHTML = html;
+    }
+
+    async function startBomQuery(pn) {
+      if (_bomQuerying) {
+        alert("BOM 查詢進行中，請等待完成");
+        return;
+      }
+      var username = document.getElementById("username").value.trim();
+      var password = document.getElementById("password").value.trim();
+      var plant = document.getElementById("bom_plant").value;
+
+      if (!username || !password) {
+        alert("請先填寫帳號與密碼");
+        return;
+      }
+
+      _bomQuerying = true;
+      showBomStepper(true);
+      document.getElementById("bomStepperPN").textContent = pn + " (" + plant + ")";
+      bomResultEl.classList.remove("visible");
+      bomListEl.style.display = "none";
+
+      try {
+        var res = await fetch("/api/bom_query_stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: username, password: password, pn: pn, plant: plant }),
+        });
+
+        var reader = res.body.getReader();
+        var decoder = new TextDecoder();
+        var buffer = "";
+
+        while (true) {
+          var chunk = await reader.read();
+          if (chunk.done) break;
+          buffer += decoder.decode(chunk.value, { stream: true });
+
+          var lines = buffer.split("\n");
+          buffer = lines.pop();
+
+          for (var li = 0; li < lines.length; li++) {
+            var line = lines[li];
+            if (!line.startsWith("data: ")) continue;
+            var payload = JSON.parse(line.slice(6));
+
+            if (payload.type === "progress") {
+              updateBomStep(payload.step, payload.label);
+            } else if (payload.type === "result") {
+              markAllBomDone();
+              setTimeout(function() { showBomStepper(false); }, 600);
+              if (payload.success) {
+                renderBomResults(payload);
+                if (payload.warning) {
+                  var warnEl = document.createElement("div");
+                  warnEl.style.cssText = "margin-top:0.5rem;padding:0.5rem 0.75rem;background:rgba(210,153,34,0.15);border:1px solid rgba(210,153,34,0.4);border-radius:6px;color:#d2992a;font-size:0.85rem;white-space:pre-wrap;";
+                  warnEl.textContent = payload.warning;
+                  bomListEl.prepend(warnEl);
+                }
+              } else {
+                bomResultEl.className = "result visible error";
+                bomResultEl.textContent = payload.error || "BOM 查詢失敗";
+                bomListEl.style.display = "none";
+              }
+            } else if (payload.type === "error") {
+              showBomStepper(false);
+              bomResultEl.className = "result visible error";
+              bomResultEl.textContent = payload.error || "BOM 查詢失敗";
+            }
+          }
+        }
+      } catch (err) {
+        bomResultEl.className = "result visible error";
+        bomResultEl.textContent = "BOM 連線錯誤：" + (err.message || "請確認後端已啟動");
+        showBomStepper(false);
+      } finally {
+        _bomQuerying = false;
+      }
+    }
+
+    // 委派事件：點擊結果表格中的料號連結
+    document.getElementById("resultList").addEventListener("click", function(e) {
+      var link = e.target.closest(".bom-link");
+      if (!link) return;
+      e.preventDefault();
+      var pn = link.getAttribute("data-pn");
+      if (pn) startBomQuery(pn);
+    });
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();

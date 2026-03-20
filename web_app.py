@@ -338,6 +338,813 @@ def _fetch_cost_highest_from_anydoor(driver, product_numbers, username, password
         return result, f"{step} 例外: {type(ex).__name__}: {ex}"
 
 
+def _fetch_bom_with_cost(username, password, pn, plant, on_progress=None):
+    """
+    到 Anydoor > SAP Report > BOM with cost 查詢指定 PN 的 BOM 物料資料，
+    篩選含 ARM / DDR / eMMC 的料，回傳 (list_of_dicts, error_msg)。
+    """
+    driver = None
+    step = "初始化"
+    try:
+        if on_progress:
+            on_progress(0, "啟動瀏覽器")
+
+        options = webdriver.ChromeOptions()
+        options.add_argument("--headless=new")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--window-size=1920,1080")
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("--auth-server-allowlist=*.adlinktech.com")
+        options.add_argument("--remote-debugging-port=0")
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+
+        driver = webdriver.Chrome(
+            service=Service(ChromeDriverManager().install()),
+            options=options,
+        )
+        wait = WebDriverWait(driver, 15)
+
+        # ════ EIP 登入 ════
+        step = "EIP-Login: 開啟"
+        if on_progress:
+            on_progress(1, "登入 EIP 中…")
+        driver.get(EIP_LOGIN_URL)
+
+        if "Account/Logon" in driver.current_url:
+            step = "EIP-Login: 填入帳密"
+            acct_input = wait.until(
+                EC.presence_of_element_located((By.ID, "account"))
+            )
+            pwd_input = driver.find_element(By.ID, "password")
+            acct_input.clear()
+            acct_input.send_keys(username)
+            pwd_input.clear()
+            pwd_input.send_keys(password)
+
+            step = "EIP-Login: 點擊登入"
+            login_btn = driver.find_element(
+                By.CSS_SELECTOR, "button.btn-primary.btn-block"
+            )
+            login_btn.click()
+
+            step = "EIP-Login: 等待完成"
+            try:
+                WebDriverWait(driver, 10).until(
+                    lambda d: "Account/Logon" not in d.current_url
+                )
+            except TimeoutException:
+                return [], f"EIP 登入失敗: 仍在登入頁 URL={driver.current_url}"
+
+        # ════ 進入 anydoor（URL 嵌入帳密通過 HTTP 認證）════
+        step = "Step1: 開啟 anydoor (HTTP auth)"
+        if on_progress:
+            on_progress(1, "開啟 Anydoor…")
+        safe_user = quote(username, safe="")
+        safe_pass = quote(password, safe="")
+        driver.get(
+            f"https://{safe_user}:{safe_pass}"
+            f"@anydoor.adlinktech.com/AnydoorWebNew"
+        )
+        time.sleep(2)
+
+        src500 = driver.page_source[:500]
+        if "401" in src500 or "Unauthorized" in src500:
+            return [], "anydoor 認證失敗"
+
+        # ════ 選擇 SAP Report ════
+        step = "Step2: 選擇 SAP Report"
+        sys_select = wait.until(
+            EC.presence_of_element_located((By.ID, "SystemList"))
+        )
+        time.sleep(0.3)
+        found_sap = False
+        for opt in sys_select.find_elements(By.TAG_NAME, "option"):
+            if "SAP Report" in opt.text:
+                opt.click()
+                found_sap = True
+                break
+        if not found_sap:
+            return [], "無 SAP Report 選項"
+        time.sleep(0.5)
+
+        # ════ 點擊 BOM with cost 報表（先展開父選單再點子項）════
+        step = "Step3: 展開 BOM With Cost 選單"
+        if on_progress:
+            on_progress(2, "開啟 BOM with cost 報表…")
+        # 找到所有含 "bom with cost" 的連結
+        bom_links = driver.find_elements(
+            By.XPATH,
+            "//a[contains(translate(text(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'bom with cost')]"
+        )
+        if not bom_links:
+            bom_links = [wait.until(EC.presence_of_element_located(
+                (By.XPATH, "//a[contains(translate(text(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'bom')]")
+            ))]
+        if len(bom_links) >= 2:
+            # 第一個是父選單，點擊展開；第二個是子項目
+            bom_links[0].click()
+            time.sleep(0.3)
+            step = "Step3: 點擊 BOM With Cost 子項"
+            bom_links[1].click()
+        else:
+            # 只找到一個，嘗試先展開父選單
+            link = bom_links[0]
+            try:
+                if not link.is_displayed():
+                    parent_a = link.find_element(
+                        By.XPATH,
+                        "./ancestor::ul[contains(@class,'nav-second-level')]"
+                        "/preceding-sibling::a",
+                    )
+                    parent_a.click()
+                    time.sleep(0.2)
+            except Exception:
+                pass
+            link.click()
+        time.sleep(0.5)
+
+        # ════ 切換 iframe ════
+        step = "Step4: 切換 iframe"
+        iframe = wait.until(
+            EC.presence_of_element_located((By.ID, "pageContent"))
+        )
+        driver.switch_to.frame(iframe)
+        time.sleep(1)
+
+        # BOM with cost 頁面可能還有內層 iframe，嘗試偵測並切入
+        try:
+            inner_iframes = driver.find_elements(By.TAG_NAME, "iframe")
+            if inner_iframes:
+                driver.switch_to.frame(inner_iframes[0])
+                time.sleep(0.5)
+        except Exception:
+            pass
+
+        # ════ 填入 PN 與 Plant ════
+        step = "Step5: 填入 PN 與 Plant"
+        if on_progress:
+            on_progress(2, f"填入 PN: {pn}，Plant: {plant}")
+
+        # 等待頁面載入完成後再找元素，加長等待時間
+        pn_input = None
+        for sel in ["#MATERIAL_NO", "textarea[ng-model='Search.PN']", "input[ng-model='Search.PN']",
+                     "textarea[name='PN']", "input[name='PN']"]:
+            try:
+                pn_input = WebDriverWait(driver, 8).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, sel))
+                )
+                break
+            except TimeoutException:
+                continue
+        if pn_input is None:
+            # 診斷：dump 頁面上所有 input/select/textarea 的 id、name、type
+            diag = driver.execute_script("""
+                var result = [];
+                var els = document.querySelectorAll('input, select, textarea');
+                for (var i = 0; i < els.length; i++) {
+                    result.push({
+                        tag: els[i].tagName,
+                        id: els[i].id || '',
+                        name: els[i].name || '',
+                        type: els[i].type || '',
+                        cls: els[i].className || ''
+                    });
+                }
+                // 也檢查有無 iframe
+                var iframes = document.querySelectorAll('iframe');
+                for (var i = 0; i < iframes.length; i++) {
+                    result.push({tag: 'IFRAME', id: iframes[i].id || '', name: iframes[i].name || '', src: (iframes[i].src || '').substring(0, 100)});
+                }
+                return JSON.stringify(result);
+            """)
+            return [], f"找不到 PN 輸入欄位。頁面元素: {diag}"
+        pn_input.clear()
+        pn_input.send_keys(pn)
+
+        # Plant 下拉選單（BOM with cost 頁面欄位為 select#PLANT）
+        try:
+            plant_el = driver.find_element(By.CSS_SELECTOR, "#PLANT")
+            plant_select = Select(plant_el)
+            plant_select.select_by_value(plant)
+        except Exception:
+            # fallback: 用 JS 直接設定
+            driver.execute_script("""
+                var sel = document.getElementById('PLANT');
+                if (sel) {
+                    sel.value = arguments[0];
+                    sel.dispatchEvent(new Event('change', {bubbles: true}));
+                }
+            """, plant)
+
+        # ════ 點擊 Search ════
+        step = "Step6: Search"
+        if on_progress:
+            on_progress(3, "查詢 BOM 資料…")
+
+        search_btn = driver.find_element(
+            By.CSS_SELECTOR, "input[type='button'][value='Search']"
+        )
+        # Kendo-aware fingerprint（Search 前記錄，Search 後比對變化）
+        old_fp = driver.execute_script("""
+            try {
+                var ssEl = document.querySelector('.k-spreadsheet');
+                if (ssEl && window.jQuery) {
+                    var ss = jQuery(ssEl).data('kendoSpreadsheet');
+                    if (ss) {
+                        var json = ss.activeSheet().toJSON();
+                        var sRows = json.rows || [];
+                        if (sRows.length > 1) {
+                            var fc = sRows[1].cells || [];
+                            var fv = fc.length > 0 ? String(fc[0].value || '') : '';
+                            return sRows.length + ':' + fv;
+                        }
+                        return sRows.length + ':';
+                    }
+                }
+            } catch(e) {}
+            var rows = document.querySelectorAll('table tbody tr');
+            if (rows.length === 0) return '';
+            var first = rows[0].textContent.trim();
+            var last = rows[rows.length - 1].textContent.trim().substring(0, 80);
+            return rows.length + ':' + first + '|' + last;
+        """) or ""
+        search_btn.click()
+        time.sleep(0.5)
+
+        # 等待資料載入（Kendo-aware）
+        step = "Step7: 等待資料"
+        def data_ready(drv):
+            return drv.execute_script("""
+                try {
+                    var ssEl = document.querySelector('.k-spreadsheet');
+                    if (ssEl && window.jQuery) {
+                        var ss = jQuery(ssEl).data('kendoSpreadsheet');
+                        if (ss) {
+                            var json = ss.activeSheet().toJSON();
+                            var sRows = json.rows || [];
+                            if (sRows.length > 1) {
+                                var fc = sRows[1].cells || [];
+                                var fv = fc.length > 0 ? String(fc[0].value || '') : '';
+                                var fp2 = sRows.length + ':' + fv;
+                                return fp2 !== arguments[0];
+                            }
+                            return sRows.length > 0;
+                        }
+                    }
+                } catch(e) {}
+                var rows = document.querySelectorAll('table tbody tr');
+                if (rows.length === 0) return false;
+                var first = rows[0].textContent.trim();
+                var last = rows[rows.length - 1].textContent.trim().substring(0, 80);
+                var fp = rows.length + ':' + first + '|' + last;
+                return fp !== arguments[0];
+            """, old_fp)
+
+        try:
+            WebDriverWait(driver, 30, poll_frequency=0.5).until(data_ready)
+        except TimeoutException:
+            return [], f"BOM 查詢逾時: {pn}"
+
+        # ════ 點擊 material Data 1 頁籤 ════
+        step = "Step8: 點擊 material Data 1"
+        if on_progress:
+            on_progress(3, "切換到 material Data 1…")
+        try:
+            tab = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable(
+                    (By.CSS_SELECTOR, "span.k-link[title='Material Data 1']")
+                )
+            )
+            tab.click()
+            time.sleep(1)
+        except TimeoutException:
+            pass  # 頁籤可能預設就是 Material Data 1
+
+        # ════ 提取表格資料 ════
+        step = "Step9: 提取資料"
+        if on_progress:
+            on_progress(4, "提取 BOM 資料…")
+
+        BOM_PN_PREFIXES = ("71-", "72-")
+
+        def _build_col_map(headers):
+            """建立欄位索引對照表"""
+            col_map = {}
+            want_cols = {
+                "part_no": ["PART NO", "Part No", "PartNo", "Material"],
+                "part_spec": ["Part Spec", "PartSpec", "Description", "Material Description"],
+                "lead_time": ["Lead Time", "LeadTime", "Lead time"],
+                "accumu_qty": ["Accumu Qty", "AccumuQty", "Accum Qty", "Quantity"],
+                "last_purchasing_price": ["Last Purchasing Price", "LastPurchasingPrice", "Last Price"],
+                "local_currency": ["Local Currency", "LocalCurrency", "Currency"],
+            }
+            for key, aliases in want_cols.items():
+                for i, h in enumerate(headers):
+                    h_clean = h.strip()
+                    for alias in aliases:
+                        if alias.lower() in h_clean.lower():
+                            col_map[key] = i
+                            break
+                    if key in col_map:
+                        break
+            return col_map, want_cols
+
+        def _extract_and_filter(rows_data, headers):
+            """從表格資料中篩選 PART NO 以 71 或 72 開頭的列"""
+            col_map, want_cols = _build_col_map(headers)
+            items = []
+            pn_idx = col_map.get("part_no")
+            for row in rows_data:
+                pn_val = row[pn_idx].strip() if pn_idx is not None and pn_idx < len(row) else ""
+                if not pn_val or not pn_val.startswith(BOM_PN_PREFIXES):
+                    continue
+                item = {}
+                for key in want_cols:
+                    idx = col_map.get(key)
+                    item[key] = row[idx] if idx is not None and idx < len(row) else ""
+                items.append(item)
+            return items
+
+        # Kendo Spreadsheet API 提取資料（BOM with cost 結果是 Kendo Spreadsheet）
+        JS_GET_TABLE = """
+            // 嘗試 Kendo Spreadsheet
+            try {
+                var ssEl = document.querySelector('.k-spreadsheet');
+                if (ssEl && window.jQuery) {
+                    var ss = jQuery(ssEl).data('kendoSpreadsheet');
+                    if (ss) {
+                        var sheet = ss.activeSheet();
+                        var json = sheet.toJSON();
+                        var sRows = json.rows || [];
+                        if (sRows.length > 0) {
+                            var maxCol = 0;
+                            for (var r = 0; r < sRows.length; r++) {
+                                var cs = sRows[r].cells || [];
+                                for (var c = 0; c < cs.length; c++) {
+                                    var ci = cs[c].index != null ? cs[c].index : c;
+                                    if (ci > maxCol) maxCol = ci;
+                                }
+                            }
+                            var hdr = [];
+                            var hdrCells = sRows[0].cells || [];
+                            for (var col = 0; col <= maxCol; col++) {
+                                var val = '';
+                                for (var c = 0; c < hdrCells.length; c++) {
+                                    var ci2 = hdrCells[c].index != null ? hdrCells[c].index : c;
+                                    if (ci2 === col) { val = String(hdrCells[c].value || '').trim(); break; }
+                                }
+                                hdr.push(val);
+                            }
+                            var data = [];
+                            for (var r = 1; r < sRows.length; r++) {
+                                var rowCells = sRows[r].cells || [];
+                                var rowData = [];
+                                var hasVal = false;
+                                for (var col = 0; col <= maxCol; col++) {
+                                    var v = '';
+                                    for (var c = 0; c < rowCells.length; c++) {
+                                        var ci3 = rowCells[c].index != null ? rowCells[c].index : c;
+                                        if (ci3 === col) { v = String(rowCells[c].value || '').trim(); break; }
+                                    }
+                                    rowData.push(v);
+                                    if (v) hasVal = true;
+                                }
+                                if (hasVal) data.push(rowData);
+                            }
+                            return {h: hdr, d: data, src: 'kendo'};
+                        }
+                    }
+                }
+            } catch(e) {}
+            // Fallback: 普通 HTML table
+            var ths = document.querySelectorAll('table thead tr th');
+            var hdr = [];
+            for (var i = 0; i < ths.length; i++)
+                hdr.push(ths[i].textContent.trim().replace(/\\u00a0/g,' '));
+            var rows = document.querySelectorAll('table tbody tr');
+            var data = [];
+            for (var i = 0; i < rows.length; i++) {
+                var cells = rows[i].querySelectorAll('td');
+                var r = [];
+                for (var j = 0; j < cells.length; j++)
+                    r.push(cells[j].textContent.trim());
+                data.push(r);
+            }
+            return {h: hdr, d: data, src: 'table'};
+        """
+
+        # Kendo Spreadsheet 無翻頁（資料一次全在 sheet 裡），所以不需要 JS_NEXT_PAGE/JS_GET_ROWS
+        # 但保留 fallback 給普通 table 的情況
+        JS_NEXT_PAGE = """
+            var items = document.querySelectorAll('ul.pagination li');
+            for (var i = 0; i < items.length; i++) {
+                var a = items[i].querySelector('a');
+                if (!a) continue;
+                var t = a.textContent.trim();
+                if (t==='>'||t==='›'||t==='»'||t==='Next') {
+                    if (items[i].className.indexOf('disabled') === -1) {
+                        a.click();
+                        return true;
+                    }
+                }
+            }
+            return false;
+        """
+        JS_GET_ROWS = """
+            var rows = document.querySelectorAll('table tbody tr');
+            var data = [];
+            for (var i = 0; i < rows.length; i++) {
+                var cells = rows[i].querySelectorAll('td');
+                var r = [];
+                for (var j = 0; j < cells.length; j++)
+                    r.push(cells[j].textContent.trim());
+                data.push(r);
+            }
+            return data;
+        """
+
+        # 取得表頭與全部資料（Kendo Spreadsheet 一次全拿到，不需翻頁）
+        tbl = driver.execute_script(JS_GET_TABLE)
+        is_kendo = tbl.get("src") == "kendo"
+        all_items = _extract_and_filter(tbl["d"], tbl["h"])
+
+        # 翻頁處理（只有普通 table 才需要，Kendo Spreadsheet 跳過）
+        if not is_kendo:
+            page_num = 1
+            while True:
+                try:
+                    next_info = driver.execute_script(JS_NEXT_PAGE)
+                    if not next_info:
+                        break
+                    page_num += 1
+                    if on_progress:
+                        on_progress(4, f"提取 BOM 資料 - 第{page_num}頁…")
+                    time.sleep(0.5)
+                    page_data = driver.execute_script(JS_GET_ROWS)
+                    all_items.extend(_extract_and_filter(page_data, tbl["h"]))
+                except Exception:
+                    break
+
+        driver.switch_to.default_content()
+
+        if not all_items:
+            return [], f"BOM 中未找到 PART NO 以 71-/72- 開頭的物料 ({pn})"
+
+        return all_items, None
+
+    except Exception as ex:
+        try:
+            if driver:
+                driver.switch_to.default_content()
+        except Exception:
+            pass
+        return [], f"{step} 例外: {type(ex).__name__}: {ex}"
+    finally:
+        if driver:
+            try:
+                import threading as _thr
+                quit_thread = _thr.Thread(target=driver.quit, daemon=True)
+                quit_thread.start()
+                quit_thread.join(timeout=15)
+            except Exception:
+                pass
+
+
+def _fetch_batch_bom_with_cost(username, password, pn_list, plant, on_progress=None):
+    """
+    批次 BOM 查詢：開一個 Chrome，登入 EIP + anydoor 一次，
+    逐 PN 查 BOM with cost，篩選 71/72 開頭物料，回傳彙整結果。
+    回傳 (dict{pn: [items]}, list[warnings])
+    """
+    BOM_PN_PREFIXES = ("71-", "72-")
+    driver = None
+    step = "初始化"
+    results = {}       # {pn: [item_dicts]}
+    warnings = []
+    total = len(pn_list)
+
+    def _extract_and_filter(rows_data, headers):
+        """從表格資料中篩選 PART NO 以 71 或 72 開頭的列"""
+        col_map = {}
+        want_cols = {
+            "part_no": ["PART NO", "Part No", "PartNo", "Material"],
+            "part_spec": ["Part Spec", "PartSpec", "Description", "Material Description"],
+            "lead_time": ["Lead Time", "LeadTime", "Lead time"],
+            "accumu_qty": ["Accumu Qty", "AccumuQty", "Accum Qty", "Quantity"],
+            "last_purchasing_price": ["Last Purchasing Price", "LastPurchasingPrice", "Last Price"],
+            "local_currency": ["Local Currency", "LocalCurrency", "Currency"],
+        }
+        for key, aliases in want_cols.items():
+            for i, h in enumerate(headers):
+                h_clean = h.strip()
+                for alias in aliases:
+                    if alias.lower() in h_clean.lower():
+                        col_map[key] = i
+                        break
+                if key in col_map:
+                    break
+
+        items = []
+        pn_idx = col_map.get("part_no")
+        for row in rows_data:
+            pn_val = row[pn_idx].strip() if pn_idx is not None and pn_idx < len(row) else ""
+            if not pn_val or not pn_val.startswith(BOM_PN_PREFIXES):
+                continue
+            item = {}
+            for key in want_cols:
+                idx = col_map.get(key)
+                item[key] = row[idx] if idx is not None and idx < len(row) else ""
+            items.append(item)
+        return items
+
+    try:
+        if on_progress:
+            on_progress(0, "啟動瀏覽器")
+
+        options = webdriver.ChromeOptions()
+        options.add_argument("--headless=new")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--window-size=1920,1080")
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("--auth-server-allowlist=*.adlinktech.com")
+        options.add_argument("--remote-debugging-port=0")
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+
+        driver = webdriver.Chrome(
+            service=Service(ChromeDriverManager().install()),
+            options=options,
+        )
+        wait = WebDriverWait(driver, 15)
+
+        # ════ EIP 登入 ════
+        step = "EIP-Login"
+        if on_progress:
+            on_progress(1, "登入 EIP 中…")
+        driver.get(EIP_LOGIN_URL)
+
+        if "Account/Logon" in driver.current_url:
+            acct_input = wait.until(EC.presence_of_element_located((By.ID, "account")))
+            pwd_input = driver.find_element(By.ID, "password")
+            acct_input.clear()
+            acct_input.send_keys(username)
+            pwd_input.clear()
+            pwd_input.send_keys(password)
+            login_btn = driver.find_element(By.CSS_SELECTOR, "button.btn-primary.btn-block")
+            login_btn.click()
+            try:
+                WebDriverWait(driver, 10).until(lambda d: "Account/Logon" not in d.current_url)
+            except TimeoutException:
+                return {}, [f"EIP 登入失敗: 仍在登入頁 URL={driver.current_url}"]
+
+        # ════ 進入 anydoor ════
+        step = "開啟 anydoor"
+        if on_progress:
+            on_progress(1, "開啟 Anydoor…")
+        safe_user = quote(username, safe="")
+        safe_pass = quote(password, safe="")
+        driver.get(f"https://{safe_user}:{safe_pass}@anydoor.adlinktech.com/AnydoorWebNew")
+        time.sleep(2)
+
+        src500 = driver.page_source[:500]
+        if "401" in src500 or "Unauthorized" in src500:
+            return {}, ["anydoor 認證失敗"]
+
+        # ════ 選擇 SAP Report ════
+        step = "選擇 SAP Report"
+        sys_select = wait.until(EC.presence_of_element_located((By.ID, "SystemList")))
+        time.sleep(0.3)
+        found_sap = False
+        for opt in sys_select.find_elements(By.TAG_NAME, "option"):
+            if "SAP Report" in opt.text:
+                opt.click()
+                found_sap = True
+                break
+        if not found_sap:
+            return {}, ["無 SAP Report 選項"]
+        time.sleep(0.5)
+
+        # ════ 點擊 BOM with cost ════
+        step = "展開 BOM With Cost"
+        if on_progress:
+            on_progress(2, "開啟 BOM with cost 報表…")
+        bom_links = driver.find_elements(
+            By.XPATH,
+            "//a[contains(translate(text(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'bom with cost')]"
+        )
+        if not bom_links:
+            bom_links = [wait.until(EC.presence_of_element_located(
+                (By.XPATH, "//a[contains(translate(text(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'bom')]")
+            ))]
+        if len(bom_links) >= 2:
+            bom_links[0].click()
+            time.sleep(0.3)
+            bom_links[1].click()
+        else:
+            link = bom_links[0]
+            try:
+                if not link.is_displayed():
+                    parent_a = link.find_element(
+                        By.XPATH, "./ancestor::ul[contains(@class,'nav-second-level')]/preceding-sibling::a")
+                    parent_a.click()
+                    time.sleep(0.2)
+            except Exception:
+                pass
+            link.click()
+        time.sleep(0.5)
+
+        # ════ 切換 iframe ════
+        step = "切換 iframe"
+        iframe = wait.until(EC.presence_of_element_located((By.ID, "pageContent")))
+        driver.switch_to.frame(iframe)
+        time.sleep(1)
+        try:
+            inner_iframes = driver.find_elements(By.TAG_NAME, "iframe")
+            if inner_iframes:
+                driver.switch_to.frame(inner_iframes[0])
+                time.sleep(0.5)
+        except Exception:
+            pass
+
+        # ════ 找 PN 輸入欄位（只找一次）════
+        step = "找 PN 輸入欄位"
+        pn_input = None
+        for sel in ["#MATERIAL_NO", "textarea[ng-model='Search.PN']", "input[ng-model='Search.PN']",
+                     "textarea[name='PN']", "input[name='PN']"]:
+            try:
+                pn_input = WebDriverWait(driver, 8).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, sel))
+                )
+                break
+            except TimeoutException:
+                continue
+        if pn_input is None:
+            return {}, ["找不到 PN 輸入欄位"]
+
+        # 取得表頭（第一次就抓，後續頁面共用）
+        cached_headers = None
+
+        # ════ 逐 PN 查詢 ════
+        for pn_idx, pn in enumerate(pn_list):
+            pn = pn.strip()
+            if not pn:
+                continue
+            step = f"查詢 {pn}"
+            if on_progress:
+                on_progress(3, f"查詢 BOM ({pn_idx+1}/{total}) — {pn}")
+
+            # 清空並填入 PN
+            pn_input.clear()
+            pn_input.send_keys(pn)
+
+            # 設定 Plant
+            try:
+                plant_el = driver.find_element(By.CSS_SELECTOR, "#PLANT")
+                plant_select = Select(plant_el)
+                plant_select.select_by_value(plant)
+            except Exception:
+                driver.execute_script("""
+                    var sel = document.getElementById('PLANT');
+                    if (sel) { sel.value = arguments[0]; sel.dispatchEvent(new Event('change', {bubbles: true})); }
+                """, plant)
+
+            # 記錄舊指紋以偵測資料更新
+            old_fp = driver.execute_script("""
+                var rows = document.querySelectorAll('table tbody tr');
+                if (rows.length === 0) return '';
+                var first = rows[0].textContent.trim();
+                var last = rows[rows.length - 1].textContent.trim().substring(0, 80);
+                return rows.length + ':' + first + '|' + last;
+            """) or ""
+
+            # 點擊 Search
+            try:
+                search_btn = driver.find_element(By.CSS_SELECTOR, "input[type='button'][value='Search']")
+                search_btn.click()
+            except Exception as ex:
+                warnings.append(f"{pn}: 找不到 Search 按鈕 — {ex}")
+                continue
+            time.sleep(0.5)
+
+            # 等待資料載入
+            def data_ready(drv):
+                return drv.execute_script("""
+                    var rows = document.querySelectorAll('table tbody tr');
+                    if (rows.length === 0) return false;
+                    var first = rows[0].textContent.trim();
+                    var last = rows[rows.length - 1].textContent.trim().substring(0, 80);
+                    var fp = rows.length + ':' + first + '|' + last;
+                    return fp !== arguments[0];
+                """, old_fp)
+
+            try:
+                if old_fp:
+                    WebDriverWait(driver, 30, poll_frequency=0.5).until(data_ready)
+                else:
+                    WebDriverWait(driver, 30, poll_frequency=0.5).until(
+                        lambda drv: drv.execute_script("return document.querySelectorAll('table tbody tr').length > 0")
+                    )
+            except TimeoutException:
+                warnings.append(f"{pn}: BOM 查詢逾時")
+                continue
+
+            # 切換到 material Data 1 頁籤
+            try:
+                tab = WebDriverWait(driver, 5).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, "span.k-link[title='Material Data 1']"))
+                )
+                tab.click()
+                time.sleep(1)
+            except TimeoutException:
+                pass
+
+            # 提取表頭（第一次查時取得）
+            tbl = driver.execute_script("""
+                var ths = document.querySelectorAll('table thead tr th');
+                var hdr = [];
+                for (var i = 0; i < ths.length; i++)
+                    hdr.push(ths[i].textContent.trim().replace(/\\u00a0/g,' '));
+                var rows = document.querySelectorAll('table tbody tr');
+                var data = [];
+                for (var i = 0; i < rows.length; i++) {
+                    var cells = rows[i].querySelectorAll('td');
+                    var r = [];
+                    for (var j = 0; j < cells.length; j++)
+                        r.push(cells[j].textContent.trim());
+                    data.push(r);
+                }
+                return {h: hdr, d: data};
+            """)
+            if cached_headers is None:
+                cached_headers = tbl["h"]
+
+            all_items = _extract_and_filter(tbl["d"], cached_headers)
+
+            # 翻頁
+            page_num = 1
+            while True:
+                try:
+                    next_info = driver.execute_script("""
+                        var items = document.querySelectorAll('ul.pagination li');
+                        for (var i = 0; i < items.length; i++) {
+                            var a = items[i].querySelector('a');
+                            if (!a) continue;
+                            var t = a.textContent.trim();
+                            if (t==='>'||t==='›'||t==='»'||t==='Next') {
+                                if (items[i].className.indexOf('disabled') === -1) {
+                                    a.click();
+                                    return true;
+                                }
+                            }
+                        }
+                        return false;
+                    """)
+                    if not next_info:
+                        break
+                    page_num += 1
+                    if on_progress:
+                        on_progress(3, f"查詢 BOM ({pn_idx+1}/{total}) — {pn} 第{page_num}頁")
+                    time.sleep(0.5)
+                    page_data = driver.execute_script("""
+                        var rows = document.querySelectorAll('table tbody tr');
+                        var data = [];
+                        for (var i = 0; i < rows.length; i++) {
+                            var cells = rows[i].querySelectorAll('td');
+                            var r = [];
+                            for (var j = 0; j < cells.length; j++)
+                                r.push(cells[j].textContent.trim());
+                            data.push(r);
+                        }
+                        return data;
+                    """)
+                    all_items.extend(_extract_and_filter(page_data, cached_headers))
+                except Exception:
+                    break
+
+            if all_items:
+                results[pn] = all_items
+            else:
+                warnings.append(f"{pn}: 未找到 71/72 開頭物料")
+
+        return results, warnings
+
+    except Exception as ex:
+        warnings.append(f"{step} 例外: {type(ex).__name__}: {ex}")
+        return results, warnings
+    finally:
+        if driver:
+            try:
+                import threading as _thr
+                quit_thread = _thr.Thread(target=driver.quit, daemon=True)
+                quit_thread.start()
+                quit_thread.join(timeout=15)
+            except Exception:
+                pass
+
+
 def _extract_product_name_from_cell(cell_text):
     """
     從 PartNumber/Name/Spec 欄位擷取用於比對的 Product Name；
@@ -659,7 +1466,7 @@ def api_test_report():
 
     data = request.get_json(force=True, silent=True) or {}
     config_file = data.get("config_file", "test_products.json")
-    query_products = data.get("products", [])
+    query_products = data.get("products")
     username = data.get("username", "unknown")
     elapsed = data.get("elapsed", 0)
     warning = data.get("warning", "")
@@ -775,6 +1582,172 @@ def api_query_stream():
                     yield f"data: {json.dumps({'type': 'error', 'error': '查詢逾時（超過 5 分鐘無回應）'})}\n\n"
                     return
                 # 送出 SSE 心跳，防止連線斷開
+                yield ": keepalive\n\n"
+                continue
+            if msg[0] == "progress":
+                payload = json.dumps({"type": "progress", "step": msg[1], "label": msg[2]})
+                yield f"data: {payload}\n\n"
+            elif msg[0] == "done":
+                result = msg[1]
+                result["type"] = "result"
+                yield f"data: {json.dumps(result)}\n\n"
+                return
+
+    return Response(stream_with_context(generate()), content_type="text/event-stream")
+
+
+@app.route("/api/bom_query_stream", methods=["POST"])
+def api_bom_query_stream():
+    """SSE 串流版 BOM 查詢，點擊料號後查詢 BOM with cost 中的 ARM/DDR/eMMC 物料。"""
+    data = request.get_json(force=True, silent=True) or {}
+    username = (data.get("username") or "").strip()
+    password = (data.get("password") or "").strip()
+    pn = (data.get("pn") or "").strip()
+    plant = (data.get("plant") or "").strip()
+
+    if not username or not password or not pn or not plant:
+        def err_stream():
+            payload = json.dumps({"type": "error", "error": "請確認帳號、密碼、料號與工廠皆已填寫。"})
+            yield f"data: {payload}\n\n"
+        return Response(stream_with_context(err_stream()), content_type="text/event-stream")
+
+    import queue, threading
+    progress_queue = queue.Queue()
+
+    def on_progress(step_idx, label):
+        progress_queue.put(("progress", step_idx, label))
+
+    def worker():
+        try:
+            items, error_msg = _fetch_bom_with_cost(
+                username, password, pn, plant, on_progress=on_progress
+            )
+            if error_msg and not items:
+                progress_queue.put(("done", {
+                    "success": False,
+                    "error": error_msg,
+                    "pn": pn,
+                    "plant": plant,
+                    "bom_items": [],
+                }))
+            else:
+                progress_queue.put(("done", {
+                    "success": True,
+                    "pn": pn,
+                    "plant": plant,
+                    "bom_items": items,
+                    "count": len(items),
+                    "warning": error_msg,
+                }))
+        except Exception as ex:
+            progress_queue.put(("done", {
+                "success": False,
+                "error": str(ex),
+                "pn": pn,
+                "plant": plant,
+                "bom_items": [],
+            }))
+
+    t = threading.Thread(target=worker, daemon=True)
+    t.start()
+
+    def generate():
+        total_wait = 0
+        max_wait = 300
+        poll_interval = 10
+        while True:
+            try:
+                msg = progress_queue.get(timeout=poll_interval)
+                total_wait = 0
+            except queue.Empty:
+                total_wait += poll_interval
+                if total_wait >= max_wait:
+                    yield f"data: {json.dumps({'type': 'error', 'error': 'BOM 查詢逾時（超過 5 分鐘無回應）'})}\n\n"
+                    return
+                yield ": keepalive\n\n"
+                continue
+            if msg[0] == "progress":
+                payload = json.dumps({"type": "progress", "step": msg[1], "label": msg[2]})
+                yield f"data: {payload}\n\n"
+            elif msg[0] == "done":
+                result = msg[1]
+                result["type"] = "result"
+                yield f"data: {json.dumps(result)}\n\n"
+                return
+
+    return Response(stream_with_context(generate()), content_type="text/event-stream")
+
+
+@app.route("/api/batch_bom_query_stream", methods=["POST"])
+def api_batch_bom_query_stream():
+    """SSE 串流版批次 BOM 查詢，逐 PN 查 BOM with cost 篩選 71/72 物料。"""
+    data = request.get_json(force=True, silent=True) or {}
+    username = (data.get("username") or "").strip()
+    password = (data.get("password") or "").strip()
+    raw_pns = (data.get("pn_list") or "").strip()
+    plant = (data.get("plant") or "").strip()
+
+    pn_list = [p.strip() for p in re.split(r'[\n;]+', raw_pns) if p.strip()]
+
+    if not username or not password or not pn_list or not plant:
+        def err_stream():
+            payload = json.dumps({"type": "error", "error": "請確認帳號、密碼、料號清單與工廠皆已填寫。"})
+            yield f"data: {payload}\n\n"
+        return Response(stream_with_context(err_stream()), content_type="text/event-stream")
+
+    import queue, threading
+    progress_queue = queue.Queue()
+
+    def on_progress(step_idx, label):
+        progress_queue.put(("progress", step_idx, label))
+
+    def worker():
+        try:
+            result_map, warn_list = _fetch_batch_bom_with_cost(
+                username, password, pn_list, plant, on_progress=on_progress
+            )
+            # 彙整所有結果
+            all_items = []
+            for pn in pn_list:
+                pn = pn.strip()
+                items = result_map.get(pn, [])
+                for item in items:
+                    item["source_pn"] = pn
+                all_items.extend(items)
+
+            progress_queue.put(("done", {
+                "success": True,
+                "bom_items": all_items,
+                "count": len(all_items),
+                "total_pn": len(pn_list),
+                "matched_pn": len(result_map),
+                "plant": plant,
+                "warning": "\n".join(warn_list) if warn_list else None,
+            }))
+        except Exception as ex:
+            progress_queue.put(("done", {
+                "success": False,
+                "error": str(ex),
+                "bom_items": [],
+                "count": 0,
+            }))
+
+    t = threading.Thread(target=worker, daemon=True)
+    t.start()
+
+    def generate():
+        total_wait = 0
+        max_wait = 600          # 批次查詢可能較久，最多等 10 分鐘
+        poll_interval = 10
+        while True:
+            try:
+                msg = progress_queue.get(timeout=poll_interval)
+                total_wait = 0
+            except queue.Empty:
+                total_wait += poll_interval
+                if total_wait >= max_wait:
+                    yield f"data: {json.dumps({'type': 'error', 'error': '批次 BOM 查詢逾時（超過 10 分鐘無回應）'})}\n\n"
+                    return
                 yield ": keepalive\n\n"
                 continue
             if msg[0] == "progress":

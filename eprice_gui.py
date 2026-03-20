@@ -520,6 +520,437 @@ def _fetch_cost_highest_from_anydoor(driver, product_numbers, username, password
         return result, f"{step} 例外: {type(ex).__name__}: {ex}"
 
 
+def _fetch_bom_with_cost_gui(driver, pn, plant, username, password, status_cb=None):
+    """
+    到 Anydoor > SAP Report > BOM with cost 查詢指定 PN 的 BOM 物料資料，
+    篩選含 ARM / DDR / eMMC 的料。
+    回傳 (list_of_dicts, error_msg)。
+    使用 GUI 版 driver（開新分頁執行）。
+    """
+    step = "初始化"
+    eprice_handle = driver.current_window_handle
+    bom_tab_handle = None
+    try:
+        wait = WebDriverWait(driver, 15)
+
+        # 開新分頁
+        driver.execute_script("window.open('about:blank','_blank');")
+        all_h = driver.window_handles
+        bom_tab_handle = [h for h in all_h if h != eprice_handle][0]
+        driver.switch_to.window(bom_tab_handle)
+
+        # ════ EIP 登入 ════
+        step = "EIP-Login"
+        if status_cb:
+            status_cb("登入 EIP…")
+        driver.get(EIP_LOGIN_URL)
+
+        if "Account/Logon" in driver.current_url:
+            acct_input = wait.until(
+                EC.presence_of_element_located((By.ID, "account"))
+            )
+            pwd_input = driver.find_element(By.ID, "password")
+            acct_input.clear()
+            acct_input.send_keys(username)
+            pwd_input.clear()
+            pwd_input.send_keys(password)
+            login_btn = driver.find_element(
+                By.CSS_SELECTOR, "button.btn-primary.btn-block"
+            )
+            login_btn.click()
+            try:
+                WebDriverWait(driver, 10).until(
+                    lambda d: "Account/Logon" not in d.current_url
+                )
+            except TimeoutException:
+                return [], f"EIP 登入失敗: URL={driver.current_url}"
+
+        # ════ 進入 anydoor ════
+        step = "開啟 anydoor"
+        if status_cb:
+            status_cb("開啟 Anydoor…")
+        safe_user = quote(username, safe="")
+        safe_pass = quote(password, safe="")
+        driver.get(
+            f"https://{safe_user}:{safe_pass}"
+            f"@anydoor.adlinktech.com/AnydoorWebNew"
+        )
+        time.sleep(2)
+
+        src500 = driver.page_source[:500]
+        if "401" in src500 or "Unauthorized" in src500:
+            return [], "anydoor 認證失敗"
+
+        # ════ 選擇 SAP Report ════
+        step = "選擇 SAP Report"
+        sys_select = wait.until(
+            EC.presence_of_element_located((By.ID, "SystemList"))
+        )
+        time.sleep(0.3)
+        found_sap = False
+        for opt in sys_select.find_elements(By.TAG_NAME, "option"):
+            if "SAP Report" in opt.text:
+                opt.click()
+                found_sap = True
+                break
+        if not found_sap:
+            return [], "無 SAP Report 選項"
+        time.sleep(0.5)
+
+        # ════ 點擊 BOM with cost（先展開父選單再點子項）════
+        step = "展開 BOM With Cost 選單"
+        if status_cb:
+            status_cb("開啟 BOM with cost…")
+        bom_links = driver.find_elements(
+            By.XPATH,
+            "//a[contains(translate(text(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'bom with cost')]"
+        )
+        if not bom_links:
+            bom_links = [wait.until(EC.presence_of_element_located(
+                (By.XPATH, "//a[contains(translate(text(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'bom')]")
+            ))]
+        if len(bom_links) >= 2:
+            bom_links[0].click()
+            time.sleep(0.3)
+            step = "點擊 BOM With Cost 子項"
+            bom_links[1].click()
+        else:
+            link = bom_links[0]
+            try:
+                if not link.is_displayed():
+                    parent_a = link.find_element(
+                        By.XPATH,
+                        "./ancestor::ul[contains(@class,'nav-second-level')]"
+                        "/preceding-sibling::a",
+                    )
+                    parent_a.click()
+                    time.sleep(0.2)
+            except Exception:
+                pass
+            link.click()
+        time.sleep(0.5)
+
+        # ════ 切換 iframe ════
+        step = "切換 iframe"
+        iframe = wait.until(
+            EC.presence_of_element_located((By.ID, "pageContent"))
+        )
+        driver.switch_to.frame(iframe)
+        time.sleep(1)
+
+        # 偵測內層 iframe
+        try:
+            inner_iframes = driver.find_elements(By.TAG_NAME, "iframe")
+            if inner_iframes:
+                driver.switch_to.frame(inner_iframes[0])
+                time.sleep(0.5)
+        except Exception:
+            pass
+
+        # ════ 填入 PN 與 Plant ════
+        step = "填入 PN 與 Plant"
+        if status_cb:
+            status_cb(f"填入 PN: {pn}，Plant: {plant}")
+
+        pn_input = None
+        for sel in ["#MATERIAL_NO", "textarea[ng-model='Search.PN']", "input[ng-model='Search.PN']"]:
+            try:
+                pn_input = WebDriverWait(driver, 8).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, sel))
+                )
+                break
+            except TimeoutException:
+                continue
+        if pn_input is None:
+            diag = driver.execute_script("""
+                var result = [];
+                var els = document.querySelectorAll('input, select, textarea');
+                for (var i = 0; i < els.length; i++) {
+                    result.push({tag: els[i].tagName, id: els[i].id || '', name: els[i].name || '', type: els[i].type || ''});
+                }
+                var iframes = document.querySelectorAll('iframe');
+                for (var i = 0; i < iframes.length; i++) {
+                    result.push({tag: 'IFRAME', id: iframes[i].id || '', src: (iframes[i].src || '').substring(0, 100)});
+                }
+                return JSON.stringify(result);
+            """)
+            return [], f"找不到 PN 輸入欄位。頁面元素: {diag}"
+        pn_input.clear()
+        pn_input.send_keys(pn)
+
+        # Plant 下拉
+        try:
+            plant_el = driver.find_element(By.CSS_SELECTOR, "#PLANT")
+            plant_select = Select(plant_el)
+            plant_select.select_by_value(plant)
+        except Exception:
+            driver.execute_script("""
+                var sel = document.getElementById('PLANT');
+                if (sel) {
+                    sel.value = arguments[0];
+                    sel.dispatchEvent(new Event('change', {bubbles: true}));
+                }
+            """, plant)
+
+        # ════ Search ════
+        step = "Search"
+        if status_cb:
+            status_cb("查詢 BOM 資料…")
+        search_btn = driver.find_element(
+            By.CSS_SELECTOR, "input[type='button'][value='Search']"
+        )
+        # Kendo-aware fingerprint（Search 前記錄，Search 後比對變化）
+        old_fp = driver.execute_script("""
+            try {
+                var ssEl = document.querySelector('.k-spreadsheet');
+                if (ssEl && window.jQuery) {
+                    var ss = jQuery(ssEl).data('kendoSpreadsheet');
+                    if (ss) {
+                        var json = ss.activeSheet().toJSON();
+                        var sRows = json.rows || [];
+                        if (sRows.length > 1) {
+                            var fc = sRows[1].cells || [];
+                            var fv = fc.length > 0 ? String(fc[0].value || '') : '';
+                            return sRows.length + ':' + fv;
+                        }
+                        return sRows.length + ':';
+                    }
+                }
+            } catch(e) {}
+            var rows = document.querySelectorAll('table tbody tr');
+            if (rows.length === 0) return '';
+            var first = rows[0].textContent.trim();
+            var last = rows[rows.length - 1].textContent.trim().substring(0, 80);
+            return rows.length + ':' + first + '|' + last;
+        """) or ""
+        search_btn.click()
+        time.sleep(0.5)
+
+        # 等待資料載入（Kendo-aware）
+        step = "等待資料"
+        def data_ready(drv):
+            return drv.execute_script("""
+                try {
+                    var ssEl = document.querySelector('.k-spreadsheet');
+                    if (ssEl && window.jQuery) {
+                        var ss = jQuery(ssEl).data('kendoSpreadsheet');
+                        if (ss) {
+                            var json = ss.activeSheet().toJSON();
+                            var sRows = json.rows || [];
+                            if (sRows.length > 1) {
+                                var fc = sRows[1].cells || [];
+                                var fv = fc.length > 0 ? String(fc[0].value || '') : '';
+                                var fp2 = sRows.length + ':' + fv;
+                                return fp2 !== arguments[0];
+                            }
+                            return sRows.length > 0;
+                        }
+                    }
+                } catch(e) {}
+                var rows = document.querySelectorAll('table tbody tr');
+                if (rows.length === 0) return false;
+                var first = rows[0].textContent.trim();
+                var last = rows[rows.length - 1].textContent.trim().substring(0, 80);
+                var fp = rows.length + ':' + first + '|' + last;
+                return fp !== arguments[0];
+            """, old_fp)
+
+        try:
+            WebDriverWait(driver, 30, poll_frequency=0.5).until(data_ready)
+        except TimeoutException:
+            return [], f"BOM 查詢逾時: {pn}"
+
+        # ════ 點擊 Material Data 1 ════
+        step = "點擊 Material Data 1"
+        if status_cb:
+            status_cb("切換到 Material Data 1…")
+        try:
+            tab = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable(
+                    (By.CSS_SELECTOR, "span.k-link[title='Material Data 1']")
+                )
+            )
+            tab.click()
+            time.sleep(1)
+        except TimeoutException:
+            pass
+
+        # ════ 提取資料 ════
+        step = "提取資料"
+        if status_cb:
+            status_cb("提取 BOM 物料…")
+
+        BOM_PN_PREFIXES = ("71-", "72-")
+
+        def _build_col_map(headers):
+            col_map = {}
+            want_cols = {
+                "part_no": ["PART NO", "Part No", "PartNo", "Material"],
+                "part_spec": ["Part Spec", "PartSpec", "Description", "Material Description"],
+                "lead_time": ["Lead Time", "LeadTime", "Lead time"],
+                "accumu_qty": ["Accumu Qty", "AccumuQty", "Accum Qty", "Quantity"],
+                "last_purchasing_price": ["Last Purchasing Price", "LastPurchasingPrice", "Last Price"],
+                "local_currency": ["Local Currency", "LocalCurrency", "Currency"],
+            }
+            for key, aliases in want_cols.items():
+                for i, h in enumerate(headers):
+                    h_clean = h.strip()
+                    for alias in aliases:
+                        if alias.lower() in h_clean.lower():
+                            col_map[key] = i
+                            break
+                    if key in col_map:
+                        break
+            return col_map, want_cols
+
+        def _extract_and_filter(rows_data, headers):
+            col_map, want_cols = _build_col_map(headers)
+            items = []
+            pn_idx = col_map.get("part_no")
+            for row in rows_data:
+                pn_val = row[pn_idx].strip() if pn_idx is not None and pn_idx < len(row) else ""
+                if not pn_val or not pn_val.startswith(BOM_PN_PREFIXES):
+                    continue
+                item = {}
+                for key in want_cols:
+                    idx = col_map.get(key)
+                    item[key] = row[idx] if idx is not None and idx < len(row) else ""
+                items.append(item)
+            return items
+
+        # Kendo Spreadsheet API 提取資料（BOM with cost 結果是 Kendo Spreadsheet）
+        JS_GET_TABLE = """
+            try {
+                var ssEl = document.querySelector('.k-spreadsheet');
+                if (ssEl && window.jQuery) {
+                    var ss = jQuery(ssEl).data('kendoSpreadsheet');
+                    if (ss) {
+                        var sheet = ss.activeSheet();
+                        var json = sheet.toJSON();
+                        var sRows = json.rows || [];
+                        if (sRows.length > 0) {
+                            var maxCol = 0;
+                            for (var r = 0; r < sRows.length; r++) {
+                                var cs = sRows[r].cells || [];
+                                for (var c = 0; c < cs.length; c++) {
+                                    var ci = cs[c].index != null ? cs[c].index : c;
+                                    if (ci > maxCol) maxCol = ci;
+                                }
+                            }
+                            var hdr = [];
+                            var hdrCells = sRows[0].cells || [];
+                            for (var col = 0; col <= maxCol; col++) {
+                                var val = '';
+                                for (var c = 0; c < hdrCells.length; c++) {
+                                    var ci2 = hdrCells[c].index != null ? hdrCells[c].index : c;
+                                    if (ci2 === col) { val = String(hdrCells[c].value || '').trim(); break; }
+                                }
+                                hdr.push(val);
+                            }
+                            var data = [];
+                            for (var r = 1; r < sRows.length; r++) {
+                                var rowCells = sRows[r].cells || [];
+                                var rowData = [];
+                                var hasVal = false;
+                                for (var col = 0; col <= maxCol; col++) {
+                                    var v = '';
+                                    for (var c = 0; c < rowCells.length; c++) {
+                                        var ci3 = rowCells[c].index != null ? rowCells[c].index : c;
+                                        if (ci3 === col) { v = String(rowCells[c].value || '').trim(); break; }
+                                    }
+                                    rowData.push(v);
+                                    if (v) hasVal = true;
+                                }
+                                if (hasVal) data.push(rowData);
+                            }
+                            return {h: hdr, d: data, src: 'kendo'};
+                        }
+                    }
+                }
+            } catch(e) {}
+            var ths = document.querySelectorAll('table thead tr th');
+            var hdr = [];
+            for (var i = 0; i < ths.length; i++)
+                hdr.push(ths[i].textContent.trim().replace(/\\u00a0/g,' '));
+            var rows = document.querySelectorAll('table tbody tr');
+            var data = [];
+            for (var i = 0; i < rows.length; i++) {
+                var cells = rows[i].querySelectorAll('td');
+                var r = [];
+                for (var j = 0; j < cells.length; j++)
+                    r.push(cells[j].textContent.trim());
+                data.push(r);
+            }
+            return {h: hdr, d: data, src: 'table'};
+        """
+        JS_NEXT_PAGE = """
+            var items = document.querySelectorAll('ul.pagination li');
+            for (var i = 0; i < items.length; i++) {
+                var a = items[i].querySelector('a');
+                if (!a) continue;
+                var t = a.textContent.trim();
+                if (t==='>'||t==='›'||t==='»'||t==='Next') {
+                    if (items[i].className.indexOf('disabled') === -1) {
+                        a.click();
+                        return true;
+                    }
+                }
+            }
+            return false;
+        """
+        JS_GET_ROWS = """
+            var rows = document.querySelectorAll('table tbody tr');
+            var data = [];
+            for (var i = 0; i < rows.length; i++) {
+                var cells = rows[i].querySelectorAll('td');
+                var r = [];
+                for (var j = 0; j < cells.length; j++)
+                    r.push(cells[j].textContent.trim());
+                data.push(r);
+            }
+            return data;
+        """
+        tbl = driver.execute_script(JS_GET_TABLE)
+        is_kendo = tbl.get("src") == "kendo"
+        all_items = _extract_and_filter(tbl["d"], tbl["h"])
+
+        # 翻頁（Kendo Spreadsheet 資料一次全在 sheet，不需翻頁）
+        if not is_kendo:
+            while True:
+                try:
+                    next_info = driver.execute_script(JS_NEXT_PAGE)
+                    if not next_info:
+                        break
+                    time.sleep(0.5)
+                    page_data = driver.execute_script(JS_GET_ROWS)
+                    all_items.extend(_extract_and_filter(page_data, tbl["h"]))
+                except Exception:
+                    break
+
+        driver.switch_to.default_content()
+
+        if not all_items:
+            return [], f"BOM 中未找到 PART NO 以 71-/72- 開頭的物料 ({pn})"
+
+        return all_items, None
+
+    except Exception as ex:
+        try:
+            driver.switch_to.default_content()
+        except Exception:
+            pass
+        return [], f"{step} 例外: {type(ex).__name__}: {ex}"
+    finally:
+        # 關閉 BOM 分頁，切回 ePrice
+        try:
+            if bom_tab_handle and bom_tab_handle in driver.window_handles:
+                driver.switch_to.window(bom_tab_handle)
+                driver.close()
+            driver.switch_to.window(eprice_handle)
+        except Exception:
+            pass
+
+
 def _extract_product_name_from_cell(cell_text):
     """
     從 PartNumber/Name/Spec 欄位擷取用於比對的 Product Name：
@@ -867,10 +1298,22 @@ entry_rmb_rate.insert(0, "4.4")
 entry_rmb_rate.pack(side=tk.LEFT, padx=(2, 4))
 tk.Label(rate_frame, text="NTD　（E2E% 統一以台幣換算）", fg="gray").pack(side=tk.LEFT)
 
+# BOM 查詢工廠
+tk.Label(root, text="BOM 查詢工廠:").grid(row=7, column=0, padx=5, pady=5, sticky="e")
+bom_plant_frame = tk.Frame(root)
+bom_plant_frame.grid(row=7, column=1, padx=5, pady=5, sticky="w")
+var_bom_plant = tk.StringVar(value="1100")
+combo_bom_plant = ttk.Combobox(
+    bom_plant_frame, textvariable=var_bom_plant,
+    values=["1100", "2100"], width=12, state="readonly",
+)
+combo_bom_plant.pack(side=tk.LEFT)
+tk.Label(bom_plant_frame, text="（1100-TPMC / 2100-SHMC，雙擊料號查 BOM）", fg="gray").pack(side=tk.LEFT, padx=(4, 0))
+
 # Cost(Highest) 起始時間
-tk.Label(root, text="Cost(Highest) 起始時間:").grid(row=7, column=0, padx=5, pady=5, sticky="e")
+tk.Label(root, text="Cost(Highest) 起始時間:").grid(row=8, column=0, padx=5, pady=5, sticky="e")
 period_frame = tk.Frame(root)
-period_frame.grid(row=7, column=1, padx=5, pady=5, sticky="w")
+period_frame.grid(row=8, column=1, padx=5, pady=5, sticky="w")
 entry_period_start = tk.Entry(period_frame, width=10)
 entry_period_start.insert(0, "202501")
 entry_period_start.pack(side=tk.LEFT)
@@ -878,19 +1321,19 @@ tk.Label(period_frame, text="（格式 YYYYMM，例如 202501）", fg="gray").pa
 
 # 執行按鈕
 btn_run = tk.Button(root, text="查詢 Base Price", command=run_query)
-btn_run.grid(row=8, column=0, columnspan=2, padx=5, pady=10)
+btn_run.grid(row=9, column=0, columnspan=2, padx=5, pady=10)
 
 # 結果：筆數
 lbl_result = tk.Label(root, text="共 0 筆", fg="blue")
-lbl_result.grid(row=9, column=0, columnspan=2, padx=5, pady=2)
+lbl_result.grid(row=10, column=0, columnspan=2, padx=5, pady=2)
 
 # 結果列表
 tk.Label(
     root,
     text="Product Number / Name / Spec | Currency | Base Price | Cost(Lowest) | Cost(Highest) | E2E%：",
-).grid(row=10, column=0, columnspan=2, padx=5, pady=2, sticky="w")
+).grid(row=11, column=0, columnspan=2, padx=5, pady=2, sticky="w")
 list_frame = tk.Frame(root)
-list_frame.grid(row=11, column=0, columnspan=2, padx=5, pady=5, sticky="nsew")
+list_frame.grid(row=12, column=0, columnspan=2, padx=5, pady=5, sticky="nsew")
 scrollbar = tk.Scrollbar(list_frame)
 scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 list_result = tk.Listbox(list_frame, height=12, width=100, yscrollcommand=scrollbar.set, font=("Consolas", 9))
@@ -899,16 +1342,127 @@ scrollbar.config(command=list_result.yview)
 
 # 水平捲軸
 scrollbar_h = tk.Scrollbar(root, orient=tk.HORIZONTAL, command=list_result.xview)
-scrollbar_h.grid(row=12, column=0, columnspan=2, sticky="ew", padx=5)
+scrollbar_h.grid(row=13, column=0, columnspan=2, sticky="ew", padx=5)
 list_result.config(xscrollcommand=scrollbar_h.set)
 root.columnconfigure(1, weight=1)
-root.rowconfigure(11, weight=1)
+root.rowconfigure(12, weight=1)
 
 # 即時重算：Selling Price / 幣別 / 匯率改變時，立即更新 E2E（不重新查詢）
 text_selling.bind("<KeyRelease>", lambda e: _render_results())
 var_sell_currency.trace_add("write", lambda *_: _render_results())
 entry_usd_rate.bind("<KeyRelease>", lambda e: _render_results())
 entry_rmb_rate.bind("<KeyRelease>", lambda e: _render_results())
+
+# ── BOM 查詢結果區 ──
+lbl_bom = tk.Label(root, text="", fg="blue")
+lbl_bom.grid(row=14, column=0, columnspan=2, padx=5, pady=2)
+
+tk.Label(
+    root,
+    text="BOM 物料（71-/72- 開頭）：PART NO | Part Spec | Lead Time | Accumu Qty | Last Price | Currency",
+).grid(row=15, column=0, columnspan=2, padx=5, pady=2, sticky="w")
+
+bom_frame = tk.Frame(root)
+bom_frame.grid(row=16, column=0, columnspan=2, padx=5, pady=5, sticky="nsew")
+bom_scrollbar = tk.Scrollbar(bom_frame)
+bom_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+list_bom = tk.Listbox(bom_frame, height=8, width=100, yscrollcommand=bom_scrollbar.set, font=("Consolas", 9))
+list_bom.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+bom_scrollbar.config(command=list_bom.yview)
+
+bom_scrollbar_h = tk.Scrollbar(root, orient=tk.HORIZONTAL, command=list_bom.xview)
+bom_scrollbar_h.grid(row=17, column=0, columnspan=2, sticky="ew", padx=5)
+list_bom.config(xscrollcommand=bom_scrollbar_h.set)
+
+
+def _on_result_double_click(event):
+    """雙擊結果列表中的項目，觸發 BOM 查詢。"""
+    sel = list_result.curselection()
+    if not sel:
+        return
+    idx = sel[0]
+    line = list_result.get(idx)
+    # 跳過分隔列
+    if line.startswith("──"):
+        return
+
+    # 從 _product_cache 取得 PN（取第一行）
+    # 找出對應的 cache index（扣除分隔列）
+    cache_idx = 0
+    for i in range(idx):
+        if not list_result.get(i).startswith("──"):
+            cache_idx += 1
+        # 如果到了 idx 自身且不是分隔列
+    # 直接用 cache_idx 取 product_cache
+    # 更安全的做法：從行文字取第一段
+    pn_first = line.split("|")[0].strip().split("\n")[0].strip()
+    # 如果 pn_first 太長或含多餘資料，嘗試從 cache 取
+    real_idx = -1
+    count = 0
+    for i in range(list_result.size()):
+        if list_result.get(i).startswith("──"):
+            continue
+        if i == idx:
+            real_idx = count
+            break
+        count += 1
+    if real_idx >= 0 and real_idx < len(_product_cache):
+        pn_first = _product_cache[real_idx][0].split("\n")[0].strip()
+
+    if not pn_first:
+        return
+
+    username = entry_user.get().strip()
+    password = entry_pass.get().strip()
+    plant = var_bom_plant.get()
+    if not username or not password:
+        messagebox.showwarning("提醒", "請先填寫帳號與密碼。")
+        return
+
+    global _driver
+    if _driver is None:
+        messagebox.showwarning("提醒", "請先執行查詢後再雙擊料號查 BOM。")
+        return
+
+    btn_run.config(state="disabled")
+    lbl_bom.config(text=f"BOM 查詢中… ({pn_first} / {plant})")
+    list_bom.delete(0, tk.END)
+    root.update()
+
+    try:
+        def status_cb(msg):
+            lbl_bom.config(text=f"BOM: {msg}")
+            root.update()
+
+        items, err = _fetch_bom_with_cost_gui(
+            _driver, pn_first, plant, username, password, status_cb=status_cb
+        )
+        if err and not items:
+            lbl_bom.config(text=f"BOM 查詢失敗")
+            messagebox.showwarning("BOM 查詢", err)
+        else:
+            lbl_bom.config(text=f"BOM 物料（{pn_first} / {plant}）共 {len(items)} 筆")
+            for item in items:
+                list_bom.insert(
+                    tk.END,
+                    f"{item.get('part_no','')}  |  "
+                    f"{item.get('part_spec','')}  |  "
+                    f"Lead Time: {item.get('lead_time','')}  |  "
+                    f"Accumu Qty: {item.get('accumu_qty','')}  |  "
+                    f"Last Price: {item.get('last_purchasing_price','')}  |  "
+                    f"{item.get('local_currency','')}",
+                )
+            if err:
+                messagebox.showwarning("BOM 診斷", err)
+    except Exception as e:
+        lbl_bom.config(text="BOM 查詢錯誤")
+        messagebox.showerror("BOM 錯誤", str(e))
+    finally:
+        btn_run.config(state="normal")
+
+
+list_result.bind("<Double-1>", _on_result_double_click)
+
 
 def _on_closing():
     _close_driver()
