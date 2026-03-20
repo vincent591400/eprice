@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"require\\(''pptxgenjs''\\)\")",
+      "Bash(npm root -g)",
+      "Bash(NODE_PATH=\"C:\\\\Users\\\\vincentsj.chiu\\\\AppData\\\\Roaming\\\\npm\\\\node_modules\" node -e \"const p = require\\(''pptxgenjs''\\); console.log\\(''pptxgenjs OK''\\);\")",
+      "Bash(NODE_PATH=\"C:\\\\Users\\\\vincentsj.chiu\\\\AppData\\\\Roaming\\\\npm\\\\node_modules\" node -e \"require\\(''react-icons/fa''\\); console.log\\(''react-icons OK''\\);\")",
+      "Bash(NODE_PATH=\"C:\\\\Users\\\\vincentsj.chiu\\\\AppData\\\\Roaming\\\\npm\\\\node_modules\" node -e \"require\\(''sharp''\\); console.log\\(''sharp OK''\\);\")",
+      "Bash(NODE_PATH=\"C:\\\\Users\\\\vincentsj.chiu\\\\AppData\\\\Roaming\\\\npm\\\\node_modules\" node create_pptx.js)",
+      "Bash(python -m markitdown \"AI開發經驗分享_ePrice查詢工具.pptx\")",
+      "Bash(python \"C:\\\\Users\\\\vincentsj.chiu\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\4e98b73e-a250-4c78-8249-c59185ab2b89\\\\03f09e37-b9d1-479b-9e1b-9fc4cd24c6e6\\\\skills\\\\pptx\\\\scripts\\\\office\\\\soffice.py\" --headless --convert-to pdf \"AI開發經驗分享_ePrice查詢工具.pptx\")",
+      "Bash(where soffice)",
+      "Read(//c/Program Files/LibreOffice/program/**)",
+      "Read(//c/Program Files \\(x86\\)/LibreOffice/program/**)",
+      "Bash(npm install -g docx)",
+      "Bash(NODE_PATH=\"C:\\\\Users\\\\vincentsj.chiu\\\\AppData\\\\Roaming\\\\npm\\\\node_modules\" node create_docx.js)",
+      "Bash(python \"C:\\\\Users\\\\vincentsj.chiu\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\4e98b73e-a250-4c78-8249-c59185ab2b89\\\\03f09e37-b9d1-479b-9e1b-9fc4cd24c6e6\\\\skills\\\\docx\\\\scripts\\\\office\\\\validate.py\" \"AI開發經驗分享_ePrice查詢工具.docx\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''web_app.py'', doraise=True\\); print\\(''語法檢查通過 ✓''\\)\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''web_app.py'', doraise=True\\); print\\(''OK''\\)\")",
+      "WebSearch",
+      "WebFetch(domain:www.kdnuggets.com)",
+      "WebFetch(domain:www.digitalocean.com)",
+      "WebFetch(domain:www.tldl.io)"
+    ]
+  }
+}
