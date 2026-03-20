@@ -179,13 +179,16 @@ def _fetch_cost_highest_from_anydoor(driver, product_numbers, username, password
             search_btn = driver.find_element(
                 By.CSS_SELECTOR, "input[type='button'][value='Search']"
             )
+            # 記錄搜尋前的完整指紋（行數 + 第一列全文 + 最後一列前80字元）
             old_fp = driver.execute_script("""
                 var rows = document.querySelectorAll('table tbody tr');
                 if (rows.length === 0) return '';
                 var first = rows[0].textContent.trim();
-                return rows.length + ':' + first.substring(0, 80);
+                var last = rows[rows.length - 1].textContent.trim().substring(0, 80);
+                return rows.length + ':' + first + '|' + last;
             """) or ""
             search_btn.click()
+            time.sleep(0.5)  # 等待頁面開始載入
 
             step = f"{pn_label}: 等待"
 
@@ -194,13 +197,14 @@ def _fetch_cost_highest_from_anydoor(driver, product_numbers, username, password
                     var rows = document.querySelectorAll('table tbody tr');
                     if (rows.length === 0) return false;
                     var first = rows[0].textContent.trim();
-                    var fp = rows.length + ':' + first.substring(0, 80);
+                    var last = rows[rows.length - 1].textContent.trim().substring(0, 80);
+                    var fp = rows.length + ':' + first + '|' + last;
                     return fp !== arguments[0];
                 """, old_fp)
 
             if old_fp:
                 try:
-                    WebDriverWait(driver, 15, poll_frequency=0.3).until(data_ready)
+                    WebDriverWait(driver, 30, poll_frequency=0.5).until(data_ready)
                 except TimeoutException:
                     diag_parts.append(f"{pn}: 逾時")
                     continue
@@ -210,7 +214,7 @@ def _fetch_cost_highest_from_anydoor(driver, product_numbers, username, password
                         "return document.querySelectorAll('table tbody tr').length > 0"
                     )
                 try:
-                    WebDriverWait(driver, 15, poll_frequency=0.3).until(has_rows)
+                    WebDriverWait(driver, 30, poll_frequency=0.5).until(has_rows)
                 except TimeoutException:
                     diag_parts.append(f"{pn}: 逾時")
                     continue
@@ -368,14 +372,17 @@ def _cell_matches_product(cell_text, want):
     # 多行欄位：want 可能不在最後一個 token，改檢查是否存在於 token 列表中
     if want in before_g.split():
         return True, before_g
+    # 多字產品名（含空格）：改用子字串比對
+    if " " in want and want in before_g:
+        return True, before_g
     return False, before_g
 
 
-def fetch_base_price(username: str, password: str, product_name: str, period_start: str = "202501", on_progress=None) -> Tuple[bool, str, list]:
+def fetch_base_price(username: str, password: str, product_names: list, period_start: str = "202501", on_progress=None) -> Tuple[bool, str, list]:
     """
-    使用 Selenium 登入並查詢，列出所有結果的 ProductNumber/Name/Spec 與 Base Price。
-    回傳 (成功與否, 錯誤訊息若失敗, 產品列表 [{product_number_name_spec, base_price}] )
-    on_progress: callback(step_index, step_label) 用於回報進度
+    使用 Selenium 登入並依序查詢多個產品的 Base Price，再統一到 anydoor 查 Cost(highest)。
+    product_names: 產品名稱列表
+    回傳 (成功與否, 警告/錯誤訊息, 產品列表 [{product_number_name_spec, base_price, query_index, query_name, ...}])
     """
     def progress(step_idx, label):
         if on_progress:
@@ -417,168 +424,181 @@ def fetch_base_price(username: str, password: str, product_name: str, period_sta
         login_btn.click()
         wait.until(lambda d: "Login.aspx" not in d.current_url)
 
-        # 2. 價目頁（先等 Product Name 輸入框出現，不強制等 Grid）
-        progress(2, "搜尋產品 Base Price")
-        driver.get(PRICE_URL)
-        wait.until(
-            EC.presence_of_element_located(
-                (By.ID, "MainContent_txt_productName")
+        # 2. 依序搜尋每個產品的 Base Price
+        all_products = []
+        query_warnings = []
+        total_queries = len(product_names)
+
+        for q_idx, product_name in enumerate(product_names):
+            want = product_name.strip()
+            if not want:
+                continue
+
+            progress(2, f"搜尋 Base Price ({q_idx+1}/{total_queries}) - {want}")
+
+            driver.get(PRICE_URL)
+            wait.until(
+                EC.presence_of_element_located(
+                    (By.ID, "MainContent_txt_productName")
+                )
             )
-        )
 
-        # 3. 等待 Product Name 輸入框可互動
-        pn_input = wait.until(
-            EC.element_to_be_clickable((By.ID, "MainContent_txt_productName"))
-        )
-        driver.execute_script("arguments[0].scrollIntoView(true);", pn_input)
-        time.sleep(0.1)
+            pn_input = wait.until(
+                EC.element_to_be_clickable((By.ID, "MainContent_txt_productName"))
+            )
+            driver.execute_script("arguments[0].scrollIntoView(true);", pn_input)
+            time.sleep(0.1)
 
-        ac = ActionChains(driver)
-        ac.move_to_element(pn_input).click()
-        ac.key_down(Keys.CONTROL).send_keys("a").key_up(Keys.CONTROL)
-        ac.send_keys(product_name)
-        ac.perform()
-        time.sleep(0.1)
+            ac = ActionChains(driver)
+            ac.move_to_element(pn_input).click()
+            ac.key_down(Keys.CONTROL).send_keys("a").key_up(Keys.CONTROL)
+            ac.send_keys(want)
+            ac.perform()
+            time.sleep(0.1)
 
-        driver.execute_script(
-            "var v = arguments[0];"
-            "var inp = document.getElementById('MainContent_txt_productName');"
-            "if(inp){"
-            "  inp.value = v; inp.setAttribute('value', v);"
-            "  inp.dispatchEvent(new Event('input',{bubbles:true}));"
-            "  inp.dispatchEvent(new Event('change',{bubbles:true}));"
-            "}",
-            product_name,
-        )
-        time.sleep(0.2)
+            driver.execute_script(
+                "var v = arguments[0];"
+                "var inp = document.getElementById('MainContent_txt_productName');"
+                "if(inp){"
+                "  inp.value = v; inp.setAttribute('value', v);"
+                "  inp.dispatchEvent(new Event('input',{bubbles:true}));"
+                "  inp.dispatchEvent(new Event('change',{bubbles:true}));"
+                "}",
+                want,
+            )
+            time.sleep(0.2)
 
-        search_btn = wait.until(
-            EC.element_to_be_clickable((By.ID, "MainContent_btn_search"))
-        )
-        search_btn.click()
+            search_btn = wait.until(
+                EC.element_to_be_clickable((By.ID, "MainContent_btn_search"))
+            )
+            search_btn.click()
 
-        wait_long = WebDriverWait(driver, 15)
+            wait_long = WebDriverWait(driver, 15)
 
-        def has_data_row(drv):
-            return drv.execute_script("""
+            def has_data_row(drv):
+                return drv.execute_script("""
+                    var g = document.getElementById('MainContent_gv');
+                    if (!g) return false;
+                    var rows = g.querySelectorAll('tbody > tr');
+                    for (var i = 0; i < rows.length; i++) {
+                        if (rows[i].querySelectorAll('td').length > 5) return true;
+                    }
+                    return false;
+                """)
+
+            try:
+                wait_long.until(has_data_row)
+            except TimeoutException:
+                query_warnings.append(f"「{want}」查無價格資料或查詢逾時")
+                continue
+
+            raw = driver.execute_script("""
                 var g = document.getElementById('MainContent_gv');
-                if (!g) return false;
+                var ths = g.querySelectorAll('thead tr th');
+                var headers = [];
+                for (var i = 0; i < ths.length; i++) headers.push(ths[i].textContent.trim().toLowerCase());
                 var rows = g.querySelectorAll('tbody > tr');
+                var data = [];
                 for (var i = 0; i < rows.length; i++) {
-                    if (rows[i].querySelectorAll('td').length > 5) return true;
+                    var cells = rows[i].querySelectorAll('td');
+                    var r = [];
+                    for (var j = 0; j < cells.length; j++) {
+                        var obj = {t: cells[j].textContent.trim()};
+                        var sp = cells[j].querySelector('span[title]');
+                        if (sp) obj.title = sp.getAttribute('title') || '';
+                        r.push(obj);
+                    }
+                    data.push(r);
                 }
-                return false;
+                return {headers: headers, rows: data};
             """)
 
-        try:
-            wait_long.until(has_data_row)
-        except TimeoutException:
-            debug_msg = driver.execute_script("""
-                var g = document.getElementById('MainContent_gv');
-                if (!g) return '無法讀取 Grid';
-                var rows = g.querySelectorAll('tbody > tr');
-                var info = [];
-                for (var i = 0; i < rows.length; i++)
-                    info.push('第'+(i+1)+'列:'+rows[i].querySelectorAll('td').length+'欄');
-                return 'tbody 共 '+rows.length+' 列。 '+info.join('；');
-            """) or "Grid 不存在"
-            return False, f"查無產品「{product_name}」的價格資料或查詢逾時。Debug: {debug_msg}", []
+            header_texts = raw["headers"]
+            base_col_index = None
+            quantity_col_index = None
+            currency_col_index = None
+            for i, text in enumerate(header_texts):
+                if "base price" in text or "baseprice" in text:
+                    base_col_index = i
+                if "quantity" in text:
+                    quantity_col_index = i
+                if "currency" in text:
+                    currency_col_index = i
 
-        raw = driver.execute_script("""
-            var g = document.getElementById('MainContent_gv');
-            var ths = g.querySelectorAll('thead tr th');
-            var headers = [];
-            for (var i = 0; i < ths.length; i++) headers.push(ths[i].textContent.trim().toLowerCase());
-            var rows = g.querySelectorAll('tbody > tr');
-            var data = [];
-            for (var i = 0; i < rows.length; i++) {
-                var cells = rows[i].querySelectorAll('td');
-                var r = [];
-                for (var j = 0; j < cells.length; j++) {
-                    var obj = {t: cells[j].textContent.trim()};
-                    var sp = cells[j].querySelector('span[title]');
-                    if (sp) obj.title = sp.getAttribute('title') || '';
-                    r.push(obj);
-                }
-                data.push(r);
-            }
-            return {headers: headers, rows: data};
-        """)
-
-        header_texts = raw["headers"]
-        base_col_index = None
-        quantity_col_index = None
-        currency_col_index = None
-        for i, text in enumerate(header_texts):
-            if "base price" in text or "baseprice" in text:
-                base_col_index = i
-            if "quantity" in text:
-                quantity_col_index = i
-            if "currency" in text:
-                currency_col_index = i
-
-        if base_col_index is None:
-            return False, "在表頭找不到 'Base Price' 欄位。", []
-        if quantity_col_index is None:
-            return False, "在表頭找不到 'Quantity' 欄位。", []
-
-        PRODUCT_COL = 1
-        product_list = []
-        need_cols = max(
-            base_col_index, PRODUCT_COL, quantity_col_index,
-            currency_col_index if currency_col_index is not None else 0,
-        )
-        want = product_name.strip()
-        for row_data in raw["rows"]:
-            if len(row_data) <= need_cols:
+            if base_col_index is None:
+                query_warnings.append(f"「{want}」表頭找不到 Base Price 欄位")
                 continue
-            if row_data[quantity_col_index]["t"] != "1":
+            if quantity_col_index is None:
+                query_warnings.append(f"「{want}」表頭找不到 Quantity 欄位")
                 continue
-            pn_ns = row_data[PRODUCT_COL]["t"]
-            matched, before_g = _cell_matches_product(pn_ns, want)
-            if not matched:
-                continue
-            # 取 want 在 before_g 中的位置來判斷 prefix
-            idx = before_g.find(want)
-            prefix = before_g[:idx].rstrip() if idx > 0 else ""
-            if prefix and (" for " in prefix or "kit" in prefix.lower()):
-                continue
-            currency = row_data[currency_col_index]["t"] if currency_col_index is not None else ""
-            bp = row_data[base_col_index]["t"]
 
-            cost_lowest = ""
-            title = row_data[base_col_index].get("title", "")
-            if title:
-                for line in title.splitlines():
-                    if "Cost(Lowest" in line:
-                        _, sep, rest = line.partition("：")
-                        cost_lowest = (rest if sep else line).strip()
-                        break
-
-            product_list.append(
-                {
-                    "product_number_name_spec": pn_ns,
-                    "currency": currency,
-                    "base_price": bp,
-                    "cost_lowest": cost_lowest,
-                }
+            PRODUCT_COL = 1
+            product_list = []
+            need_cols = max(
+                base_col_index, PRODUCT_COL, quantity_col_index,
+                currency_col_index if currency_col_index is not None else 0,
             )
+            for row_data in raw["rows"]:
+                if len(row_data) <= need_cols:
+                    continue
+                if row_data[quantity_col_index]["t"] != "1":
+                    continue
+                pn_ns = row_data[PRODUCT_COL]["t"]
+                matched, before_g = _cell_matches_product(pn_ns, want)
+                if not matched:
+                    continue
+                # 取 want 在 before_g 中的位置來判斷 prefix
+                idx = before_g.find(want)
+                prefix = before_g[:idx].rstrip() if idx > 0 else ""
+                if prefix and (" for " in prefix or "kit" in prefix.lower()):
+                    continue
+                currency = row_data[currency_col_index]["t"] if currency_col_index is not None else ""
+                bp = row_data[base_col_index]["t"]
 
-        if not product_list:
-            return False, "查無產品價格資料，或結果表無 Base Price 欄位。", []
+                cost_lowest = ""
+                title = row_data[base_col_index].get("title", "")
+                if title:
+                    for line in title.splitlines():
+                        if "Cost(Lowest" in line:
+                            _, sep, rest = line.partition("：")
+                            cost_lowest = (rest if sep else line).strip()
+                            break
+
+                product_list.append(
+                    {
+                        "product_number_name_spec": pn_ns,
+                        "currency": currency,
+                        "base_price": bp,
+                        "cost_lowest": cost_lowest,
+                        "query_index": q_idx,
+                        "query_name": want,
+                    }
+                )
+
+            if not product_list:
+                query_warnings.append(f"「{want}」查無符合的價格資料")
+                continue
+
+            all_products.extend(product_list)
+
+        if not all_products:
+            msg = "所有產品皆查無價格資料"
+            if query_warnings:
+                msg += "\n" + "\n".join(query_warnings)
+            return False, msg, []
 
         # ── 查詢 anydoor SAP Report 取得 Cost(highest) ──
         progress(3, "登入 EIP / Anydoor")
         unique_pns = list({
             p["product_number_name_spec"].split("\n")[0].strip()
-            for p in product_list
+            for p in all_products
             if p["product_number_name_spec"].strip()
         })
         cost_highest_map, anydoor_diag = _fetch_cost_highest_from_anydoor(
             driver, unique_pns, username, password, period_start=period_start,
             on_progress=on_progress,
         )
-        for p in product_list:
+        for p in all_products:
             pn_key = p["product_number_name_spec"].split("\n")[0].strip()
             ch_entries = cost_highest_map.get(pn_key, [])
             p["cost_highest_entries"] = [
@@ -587,11 +607,14 @@ def fetch_base_price(username: str, password: str, product_name: str, period_sta
 
         progress(5, "整理結果")
 
-        warn = ""
+        warn_parts = []
+        if query_warnings:
+            warn_parts.extend(query_warnings)
         if anydoor_diag:
-            warn = f" (anydoor 診斷: {anydoor_diag})"
+            warn_parts.append(f"anydoor 診斷: {anydoor_diag}")
+        warn = "\n".join(warn_parts) if warn_parts else ""
 
-        return True, warn, product_list
+        return True, warn, all_products
 
     except Exception as e:
         return False, str(e), []
@@ -612,16 +635,90 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/api/test_config")
+def api_test_config():
+    """讀取測試設定檔，回傳產品清單供前端自動帶入。"""
+    filename = request.args.get("file", "test_products.json")
+    # 安全檢查：只允許當前目錄下的 json 檔
+    if "/" in filename or "\\" in filename or ".." in filename:
+        return jsonify({"error": "不合法的檔案路徑"}), 400
+    import os
+    filepath = os.path.join(os.path.dirname(__file__) or ".", filename)
+    if not os.path.isfile(filepath):
+        return jsonify({"error": f"找不到設定檔: {filename}"}), 404
+    with open(filepath, "r", encoding="utf-8") as f:
+        cfg = json.load(f)
+    return jsonify(cfg)
+
+
+@app.route("/api/test_report", methods=["POST"])
+def api_test_report():
+    """接收查詢結果與測試設定，執行驗證並產出 HTML + CSV 報告。"""
+    import os
+    from test_eprice import validate_product, generate_html_report, generate_csv_report, RATE_MAP
+
+    data = request.get_json(force=True, silent=True) or {}
+    config_file = data.get("config_file", "test_products.json")
+    query_products = data.get("products", [])
+    username = data.get("username", "unknown")
+    elapsed = data.get("elapsed", 0)
+    warning = data.get("warning", "")
+
+    # 載入測試設定
+    filepath = os.path.join(os.path.dirname(__file__) or ".", config_file)
+    if not os.path.isfile(filepath):
+        return jsonify({"error": f"找不到設定檔: {config_file}"}), 404
+    with open(filepath, "r", encoding="utf-8") as f:
+        cfg = json.load(f)
+
+    # 設定匯率
+    RATE_MAP["USD"] = cfg.get("usd_rate", 32)
+    RATE_MAP["RMB"] = cfg.get("rmb_rate", 4.4)
+
+    # 將查詢結果配對回設定
+    all_results = []
+    for p_cfg in cfg["products"]:
+        matched = [r for r in query_products if r.get("query_name") == p_cfg["name"]]
+        result = {
+            "config": p_cfg,
+            "ok": True,
+            "warning": warning,
+            "matched_results": matched,
+            "elapsed": elapsed / max(len(cfg["products"]), 1),
+        }
+        result["checks"] = validate_product(result)
+        all_results.append(result)
+
+    # 產生報告
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    html_path = generate_html_report(all_results, username, elapsed, timestamp)
+    csv_path = generate_csv_report(all_results, timestamp)
+
+    passed = sum(1 for r in all_results if all(c[1] for c in r["checks"]))
+    failed = len(all_results) - passed
+
+    return jsonify({
+        "total": len(all_results),
+        "passed": passed,
+        "failed": failed,
+        "html_report": html_path,
+        "csv_report": csv_path,
+    })
+
+
 @app.route("/api/query_stream", methods=["POST"])
 def api_query_stream():
     """SSE 串流版查詢，即時回報進度步驟。"""
     data = request.get_json(force=True, silent=True) or {}
     username = (data.get("username") or "").strip()
     password = (data.get("password") or "").strip()
-    product_name = (data.get("product_name") or "").strip()
+    raw_product = (data.get("product_name") or "").strip()
     period_start = (data.get("period_start") or "").strip() or "202501"
 
-    if not username or not password or not product_name:
+    # 支援換行或分號分隔多個產品
+    product_names = [n.strip() for n in re.split(r'[;\n]+', raw_product) if n.strip()]
+
+    if not username or not password or not product_names:
         def err_stream():
             payload = json.dumps({"type": "error", "error": "請填寫 User Name、Password 與 Product Name。"})
             yield f"data: {payload}\n\n"
@@ -636,7 +733,7 @@ def api_query_stream():
     def worker():
         try:
             ok, error_msg, product_list = fetch_base_price(
-                username, password, product_name, period_start=period_start, on_progress=on_progress
+                username, password, product_names, period_start=period_start, on_progress=on_progress
             )
             if ok:
                 progress_queue.put(("done", {
@@ -697,17 +794,20 @@ def api_query():
     data = request.get_json(force=True, silent=True) or {}
     username = (data.get("username") or "").strip()
     password = (data.get("password") or "").strip()
-    product_name = (data.get("product_name") or "").strip()
+    raw_product = (data.get("product_name") or "").strip()
     period_start = (data.get("period_start") or "").strip() or "202501"
 
-    if not username or not password or not product_name:
+    # 支援換行或分號分隔多個產品
+    product_names = [n.strip() for n in re.split(r'[;\n]+', raw_product) if n.strip()]
+
+    if not username or not password or not product_names:
         return jsonify({
             "success": False,
             "error": "請填寫 User Name、Password 與 Product Name。",
             "base_price": None,
         }), 400
 
-    ok, error_msg, product_list = fetch_base_price(username, password, product_name, period_start=period_start)
+    ok, error_msg, product_list = fetch_base_price(username, password, product_names, period_start=period_start)
     if ok:
         return jsonify({
             "success": True,

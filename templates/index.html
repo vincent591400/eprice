@@ -64,7 +64,7 @@
       color: var(--muted);
     }
 
-    .field input {
+    .field input, .field textarea {
       width: 100%;
       padding: 0.65rem 0.85rem;
       font-size: 1rem;
@@ -77,11 +77,11 @@
       transition: border-color 0.2s;
     }
 
-    .field input:focus {
+    .field input:focus, .field textarea:focus {
       border-color: var(--accent);
     }
 
-    .field input::placeholder {
+    .field input::placeholder, .field textarea::placeholder {
       color: var(--muted);
     }
 
@@ -276,17 +276,17 @@
         <input type="password" id="password" name="password" placeholder="請輸入密碼" required />
       </div>
       <div class="field">
-        <label for="product_name">Product Name</label>
-        <input type="text" id="product_name" name="product_name" placeholder="請輸入產品名稱" required />
+        <label for="product_name">Product Name <span style="color:var(--muted);font-size:0.82rem;">（每行一個，可一次查詢多個產品）</span></label>
+        <textarea id="product_name" name="product_name" placeholder="每行一個產品名稱，例如：&#10;cExpress-SL&#10;ND-6150" required rows="3" style="resize:vertical;"></textarea>
       </div>
       <div class="field">
         <label for="period_start">Cost(Highest) 起始時間 <span style="color:var(--muted);font-size:0.82rem;">（格式 YYYYMM，例如 202501）</span></label>
         <input type="text" id="period_start" name="period_start" value="202501" placeholder="202501" maxlength="6" style="width:120px;" />
       </div>
       <div class="field">
-        <label for="selling_price">Selling Price <span style="color:var(--muted);font-size:0.82rem;">（選填；修改後立即重算 E2E%，無需重新查詢）</span></label>
-        <div style="display:flex;gap:0.5rem;">
-          <input type="number" id="selling_price" name="selling_price" placeholder="例如 100.00" step="any" min="0" style="flex:1;" />
+        <label for="selling_price">Selling Price <span style="color:var(--muted);font-size:0.82rem;">（選填；每行一個對應產品順序，修改後立即重算 E2E%）</span></label>
+        <div style="display:flex;gap:0.5rem;align-items:flex-start;">
+          <textarea id="selling_price" name="selling_price" placeholder="每行一個，對應產品順序&#10;例如：100.50&#10;85.00" rows="3" style="flex:1;resize:vertical;"></textarea>
           <select id="sell_currency" style="width:80px;padding:0.65rem 0.5rem;font-size:1rem;font-family:inherit;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:8px;outline:none;">
             <option value="USD">USD</option>
             <option value="NTD">NTD</option>
@@ -347,6 +347,8 @@
     const stepper = document.getElementById("progressStepper");
     const stepItems = stepper.querySelectorAll(".step-item");
     let currentProducts = [];
+    var _testConfigFile = null;  // 測試模式時記錄設定檔名
+    var _queryStartTime = null;  // 記錄查詢開始時間
 
     function showStepper(show) {
       stepper.classList.toggle("visible", show);
@@ -409,7 +411,9 @@
       const listEl = document.getElementById("resultList");
       if (!currentProducts.length) return;
 
-      const sellingPrice = parseNumeric(document.getElementById("selling_price").value);
+      // 解析 Selling Price（每行一個或分號分隔，逐行對應產品查詢順序）
+      const spText = document.getElementById("selling_price").value.trim();
+      const spLines = spText ? spText.split(/[;\n]+/).map(function(s){return s.trim();}).filter(function(s){return s;}) : [];
       const selCurrency = document.getElementById("sell_currency").value;
       const usdRate = parseNumeric(document.getElementById("usd_rate").value) || 1;
       const rmbRate = parseNumeric(document.getElementById("rmb_rate").value) || 1;
@@ -417,69 +421,89 @@
       resultEl.className = "result visible success";
       resultEl.innerHTML = "<span class=\"label\">共 </span><span class=\"value\">" + currentProducts.length + "</span><span class=\"label\"> 筆</span>";
       listEl.style.display = "block";
+
+      var prevQueryName = null;
+      var rowsHtml = currentProducts.map(function(p) {
+        var html = "";
+        // 不同產品查詢之間加分隔列
+        if (p.query_name && p.query_name !== prevQueryName) {
+          html += '<tr style="background:rgba(88,166,255,0.1);"><td colspan="7" style="font-weight:600;color:var(--accent);font-size:0.9rem;">\u25b8 ' + escapeHtml(p.query_name) + '</td></tr>';
+          prevQueryName = p.query_name;
+        }
+
+        const cur = p.currency || "-";
+        const cost = p.cost_lowest || "-";
+        const bpCur = p.currency ? " (" + p.currency + ")" : "";
+
+        // 依目前匯率將每筆 (cost, currency) 換算 NTD 取最大
+        var pnFirst = (p.product_number_name_spec || "").split("\n")[0].trim();
+        var is92 = pnFirst.startsWith("92");
+        var defaultCostH = is92 ? "外購品直接參考Cost (Lowest)" : "此版本尚未生產過";
+        var bestCostVal = null, bestCostCur = "", costHLabel = defaultCostH;
+        var entries = p.cost_highest_entries || [];
+        if (entries.length) {
+          var bestNTD = null;
+          for (var ei = 0; ei < entries.length; ei++) {
+            var ev = entries[ei].cost;
+            var ec = entries[ei].currency || "";
+            var ntdV = toNTD(ev, ec, usdRate, rmbRate);
+            if (bestNTD === null || ntdV > bestNTD) {
+              bestNTD = ntdV;
+              bestCostVal = ev;
+              bestCostCur = ec;
+            }
+          }
+          if (bestCostVal !== null) {
+            costHLabel = bestCostVal.toFixed(2) + (bestCostCur ? " (" + bestCostCur + ")" : "");
+          }
+        }
+
+        // 外購品 (92開頭) 且無 Cost(Highest) 時，E2E 改用 Cost(Lowest) 計算
+        var e2eCostVal = bestCostVal;
+        var e2eCostCur = bestCostCur;
+        if (is92 && bestCostVal === null) {
+          var clNum = parseFloat((p.cost_lowest || "").replace(/,/g, ""));
+          if (!isNaN(clNum)) {
+            e2eCostVal = clNum;
+            e2eCostCur = "NTD";
+          }
+        }
+
+        // 根據 query_index 匹配對應的 Selling Price（只填一個則套用全部）
+        var sellingPrice = null;
+        if (spLines.length === 1) {
+          sellingPrice = parseNumeric(spLines[0]);
+        } else if (p.query_index !== undefined && p.query_index < spLines.length) {
+          sellingPrice = parseNumeric(spLines[p.query_index]);
+        }
+
+        var spDisplay = "-";
+        var e2eDisplay = "-";
+        if (sellingPrice !== null && sellingPrice > 0) {
+          spDisplay = sellingPrice.toFixed(2) + " " + selCurrency;
+          if (e2eCostVal !== null) {
+            var spNTD = toNTD(sellingPrice, selCurrency, usdRate, rmbRate);
+            var costNTD = toNTD(e2eCostVal, e2eCostCur, usdRate, rmbRate);
+            if (spNTD > 0) {
+              var e2e = (spNTD - costNTD) / spNTD * 100;
+              e2eDisplay = e2e.toFixed(1) + "%";
+            }
+          }
+        }
+        html += "<tr><td>" + escapeHtml(p.product_number_name_spec) +
+               "</td><td>" + escapeHtml(cur) +
+               "</td><td>" + escapeHtml(p.base_price) + escapeHtml(bpCur) +
+               "</td><td>" + escapeHtml(cost) +
+               "</td><td>" + escapeHtml(costHLabel) +
+               "</td><td>" + escapeHtml(spDisplay) +
+               "</td><td>" + escapeHtml(e2eDisplay) + "</td></tr>";
+        return html;
+      }).join("");
+
       listEl.innerHTML = "<table><thead><tr>" +
         "<th>Product Number / Name / Spec</th><th>Currency</th><th>Base Price</th><th>Cost (Lowest)</th>" +
         "<th>Cost (Highest)</th><th>Selling Price</th><th>E2E% (NTD基準)</th></tr></thead><tbody>" +
-        currentProducts.map(function(p) {
-          const cur = p.currency || "-";
-          const cost = p.cost_lowest || "-";
-          const bpCur = p.currency ? " (" + p.currency + ")" : "";
-
-          // 依目前匯率將每筆 (cost, currency) 換算 NTD 取最大
-          var pnFirst = (p.product_number_name_spec || "").split("\n")[0].trim();
-          var is92 = pnFirst.startsWith("92");
-          var defaultCostH = is92 ? "外購品直接參考Cost (Lowest)" : "此版本尚未生產過";
-          var bestCostVal = null, bestCostCur = "", costHLabel = defaultCostH;
-          var entries = p.cost_highest_entries || [];
-          if (entries.length) {
-            var bestNTD = null;
-            for (var ei = 0; ei < entries.length; ei++) {
-              var ev = entries[ei].cost;
-              var ec = entries[ei].currency || "";
-              var ntdV = toNTD(ev, ec, usdRate, rmbRate);
-              if (bestNTD === null || ntdV > bestNTD) {
-                bestNTD = ntdV;
-                bestCostVal = ev;
-                bestCostCur = ec;
-              }
-            }
-            if (bestCostVal !== null) {
-              costHLabel = bestCostVal.toFixed(2) + (bestCostCur ? " (" + bestCostCur + ")" : "");
-            }
-          }
-
-          // 外購品 (92開頭) 且無 Cost(Highest) 時，E2E 改用 Cost(Lowest) 計算
-          var e2eCostVal = bestCostVal;
-          var e2eCostCur = bestCostCur;
-          if (is92 && bestCostVal === null) {
-            var clNum = parseFloat((p.cost_lowest || "").replace(/,/g, ""));
-            if (!isNaN(clNum)) {
-              e2eCostVal = clNum;
-              e2eCostCur = "NTD";
-            }
-          }
-
-          let spDisplay = "-";
-          let e2eDisplay = "-";
-          if (sellingPrice !== null && sellingPrice > 0) {
-            spDisplay = sellingPrice.toFixed(2) + " " + selCurrency;
-            if (e2eCostVal !== null) {
-              const spNTD = toNTD(sellingPrice, selCurrency, usdRate, rmbRate);
-              const costNTD = toNTD(e2eCostVal, e2eCostCur, usdRate, rmbRate);
-              if (spNTD > 0) {
-                const e2e = (spNTD - costNTD) / spNTD * 100;
-                e2eDisplay = e2e.toFixed(1) + "%";
-              }
-            }
-          }
-          return "<tr><td>" + escapeHtml(p.product_number_name_spec) +
-                 "</td><td>" + escapeHtml(cur) +
-                 "</td><td>" + escapeHtml(p.base_price) + escapeHtml(bpCur) +
-                 "</td><td>" + escapeHtml(cost) +
-                 "</td><td>" + escapeHtml(costHLabel) +
-                 "</td><td>" + escapeHtml(spDisplay) +
-                 "</td><td>" + escapeHtml(e2eDisplay) + "</td></tr>";
-        }).join("") + "</tbody></table>";
+        rowsHtml + "</tbody></table>";
     }
 
     // 即時重算：任何計算相關欄位改變都立即更新
@@ -488,6 +512,90 @@
       if (el.tagName === "SELECT") el.addEventListener("change", renderResults);
       else el.addEventListener("input", renderResults);
     });
+
+    // ── 測試模式：URL 帶 ?test=xxx.json 時自動帶入產品與價格 ──
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      var testFile = params.get("test");
+      if (!testFile) return;
+
+      fetch("/api/test_config?file=" + encodeURIComponent(testFile))
+        .then(function(r) { return r.json(); })
+        .then(function(cfg) {
+          if (cfg.error) { alert("載入測試設定失敗: " + cfg.error); return; }
+
+          _testConfigFile = testFile;
+          var products = cfg.products || [];
+          var names = products.map(function(p) { return p.name; });
+          document.getElementById("product_name").value = names.join("\n");
+
+          // Selling Price：每行對應一個產品
+          var prices = products.map(function(p) {
+            return p.selling_price != null ? p.selling_price : "";
+          });
+          document.getElementById("selling_price").value = prices.join("\n");
+
+          // 幣別（取第一個產品的設定）
+          if (products.length && products[0].sell_currency) {
+            var sel = document.getElementById("sell_currency");
+            for (var i = 0; i < sel.options.length; i++) {
+              if (sel.options[i].value === products[0].sell_currency) {
+                sel.selectedIndex = i; break;
+              }
+            }
+          }
+
+          // 匯率
+          if (cfg.usd_rate) document.getElementById("usd_rate").value = cfg.usd_rate;
+          if (cfg.rmb_rate) document.getElementById("rmb_rate").value = cfg.rmb_rate;
+          if (cfg.period_start) document.getElementById("period_start").value = cfg.period_start;
+
+          // 提示使用者輸入帳密後自動送出
+          document.title = "[測試模式] ePrice 查詢工具";
+          var hint = document.createElement("div");
+          hint.style.cssText = "margin-bottom:1rem;padding:0.6rem 1rem;background:rgba(88,166,255,0.15);border:1px solid rgba(88,166,255,0.4);border-radius:8px;color:var(--accent);font-size:0.85rem;text-align:center;";
+          hint.textContent = "測試模式：已載入 " + products.length + " 個產品（" + testFile + "），請輸入帳密後按 Enter 自動開始查詢";
+          form.insertBefore(hint, form.firstChild);
+
+          // 密碼欄 Enter 自動送出
+          document.getElementById("password").addEventListener("keydown", function(ev) {
+            if (ev.key === "Enter") {
+              ev.preventDefault();
+              form.dispatchEvent(new Event("submit", {cancelable: true}));
+            }
+          });
+        })
+        .catch(function(err) { alert("載入測試設定失敗: " + err.message); });
+    })();
+
+    // ── 測試模式：查詢完成後自動產出報告 ──
+    function generateTestReport(configFile, products, username, elapsed, warning) {
+      fetch("/api/test_report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          config_file: configFile,
+          products: products,
+          username: username,
+          elapsed: elapsed,
+          warning: warning,
+        }),
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(rpt) {
+        if (rpt.error) { console.error("報告產生失敗:", rpt.error); return; }
+        var reportEl = document.createElement("div");
+        reportEl.style.cssText = "margin-top:0.75rem;padding:0.7rem 1rem;background:rgba(63,185,80,0.12);border:1px solid rgba(63,185,80,0.35);border-radius:8px;color:var(--success);font-size:0.9rem;";
+        reportEl.innerHTML =
+          "<b>測試報告已產出</b> &mdash; " +
+          "Pass: " + rpt.passed + " / Fail: " + rpt.failed + " / 總計: " + rpt.total +
+          "<br><span style='color:var(--muted);font-size:0.82rem;'>" +
+          "HTML: " + escapeHtml(rpt.html_report) + "<br>" +
+          "CSV: " + escapeHtml(rpt.csv_report) + "</span>";
+        document.getElementById("resultList").after(reportEl);
+      })
+      .catch(function(err) { console.error("報告產生失敗:", err); });
+    }
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -503,6 +611,7 @@
       }
 
       showStepper(true);
+      _queryStartTime = Date.now();
       resultEl.classList.remove("visible");
       document.getElementById("resultList").style.display = "none";
       currentProducts = [];
@@ -543,6 +652,11 @@
                   warnEl.style.cssText = "margin-top:0.5rem;padding:0.5rem 0.75rem;background:rgba(210,153,34,0.15);border:1px solid rgba(210,153,34,0.4);border-radius:6px;color:#d2992a;font-size:0.85rem;white-space:pre-wrap;";
                   warnEl.textContent = payload.warning;
                   document.getElementById("resultList").prepend(warnEl);
+                }
+                // 測試模式：自動產出測試報告
+                if (_testConfigFile) {
+                  var elapsed = (Date.now() - _queryStartTime) / 1000;
+                  generateTestReport(_testConfigFile, currentProducts, username, elapsed, payload.warning || "");
                 }
               } else {
                 resultEl.className = "result visible error";

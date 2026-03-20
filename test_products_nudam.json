@@ -1,0 +1,48 @@
+{
+  "period_start": "202501",
+  "batch_size": 5,
+  "usd_rate": 32,
+  "rmb_rate": 4.4,
+  "products": [
+    {
+      "name": "ND-6117",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試（移除 NuDAM 前綴）",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6124",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試（移除 NuDAM 前綴）",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6160",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試（移除 NuDAM 前綴）",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6150",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試（移除 NuDAM 前綴）",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6151",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試（移除 NuDAM 前綴）",
+      "expect_found": true,
+      "is_waigoupin": false
+    }
+  ]
+}

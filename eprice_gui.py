@@ -88,8 +88,9 @@ def _to_ntd(value, currency, usd_rate, rmb_rate):
 
 def _render_results():
     """依 _product_cache 與目前的 Selling Price / 幣別 / 匯率即時渲染結果 Listbox。"""
-    selling_price_str = entry_selling.get().strip()
-    selling_price = _parse_numeric(selling_price_str)
+    # 解析 Selling Price（每行一個或分號分隔，逐行對應產品查詢順序）
+    sp_text = text_selling.get("1.0", "end-1c").strip()
+    sp_lines = [s.strip() for s in re.split(r'[;\n]+', sp_text) if s.strip()] if sp_text else []
     sel_currency = var_sell_currency.get()
     usd_rate = _parse_numeric(entry_usd_rate.get().strip()) or 1.0
     rmb_rate = _parse_numeric(entry_rmb_rate.get().strip()) or 1.0
@@ -97,9 +98,19 @@ def _render_results():
     list_result.delete(0, tk.END)
     if not _product_cache:
         return
+
+    prev_query_name = None
     for item in _product_cache:
         pn_ns, currency, bp, cost_lowest = item[0], item[1], item[2], item[3]
         ch_entries = item[4] if len(item) > 4 else []
+        query_idx = item[5] if len(item) > 5 else 0
+        query_name = item[6] if len(item) > 6 else ""
+
+        # 不同產品查詢之間加分隔列
+        if query_name and query_name != prev_query_name:
+            list_result.insert(tk.END, f"── {query_name} ──")
+            prev_query_name = query_name
+
         cost_display = cost_lowest if cost_lowest else "-"
         cur_display = currency if currency else "-"
         bp_cur_label = f" ({currency})" if currency else ""
@@ -130,6 +141,13 @@ def _render_results():
             if cl_num is not None:
                 e2e_cost_val = cl_num
                 e2e_cost_cur = "NTD"
+
+        # 根據 query_index 匹配對應的 Selling Price（只填一個則套用全部）
+        selling_price = None
+        if len(sp_lines) == 1:
+            selling_price = _parse_numeric(sp_lines[0])
+        elif query_idx < len(sp_lines):
+            selling_price = _parse_numeric(sp_lines[query_idx])
 
         e2e_display = "-"
         if selling_price is not None and selling_price > 0 and e2e_cost_val is not None:
@@ -332,14 +350,16 @@ def _fetch_cost_highest_from_anydoor(driver, product_numbers, username, password
                 By.CSS_SELECTOR,
                 "input[type='button'][value='Search']",
             )
-            # 記錄搜尋前的資料指紋，用於偵測結果更新
+            # 記錄搜尋前的完整指紋（行數 + 第一列全文 + 最後一列前80字元）
             old_fp = driver.execute_script("""
                 var rows = document.querySelectorAll('table tbody tr');
                 if (rows.length === 0) return '';
                 var first = rows[0].textContent.trim();
-                return rows.length + ':' + first.substring(0, 80);
+                var last = rows[rows.length - 1].textContent.trim().substring(0, 80);
+                return rows.length + ':' + first + '|' + last;
             """) or ""
             search_btn.click()
+            time.sleep(0.5)  # 等待頁面開始載入
 
             step = f"{pn_label}: 等待結果"
 
@@ -348,14 +368,15 @@ def _fetch_cost_highest_from_anydoor(driver, product_numbers, username, password
                     var rows = document.querySelectorAll('table tbody tr');
                     if (rows.length === 0) return false;
                     var first = rows[0].textContent.trim();
-                    var fp = rows.length + ':' + first.substring(0, 80);
+                    var last = rows[rows.length - 1].textContent.trim().substring(0, 80);
+                    var fp = rows.length + ':' + first + '|' + last;
                     return fp !== arguments[0];
                 """, old_fp)
 
             if old_fp:
                 # 已有舊資料 → 等資料指紋改變
                 try:
-                    WebDriverWait(driver, 15, poll_frequency=0.3).until(data_ready)
+                    WebDriverWait(driver, 30, poll_frequency=0.5).until(data_ready)
                 except TimeoutException:
                     diag_parts.append(f"{pn}: 等待逾時無結果")
                     continue
@@ -366,7 +387,7 @@ def _fetch_cost_highest_from_anydoor(driver, product_numbers, username, password
                         "return document.querySelectorAll('table tbody tr').length > 0"
                     )
                 try:
-                    WebDriverWait(driver, 15, poll_frequency=0.3).until(has_rows)
+                    WebDriverWait(driver, 30, poll_frequency=0.5).until(has_rows)
                 except TimeoutException:
                     diag_parts.append(f"{pn}: 等待逾時無結果")
                     continue
@@ -536,6 +557,9 @@ def _cell_matches_product(cell_text, want):
         return True, before_g
     if want in before_g.split():
         return True, before_g
+    # 多字產品名（含空格）：改用子字串比對
+    if " " in want and want in before_g:
+        return True, before_g
     return False, before_g
 
 
@@ -543,9 +567,11 @@ def run_query():
     global _product_cache, _anydoor_iframe_ready
     username = entry_user.get().strip()
     password = entry_pass.get().strip()
-    product_name = entry_product.get().strip()
+    # 支援多個產品：每行一個或分號分隔
+    raw_product = text_product.get("1.0", "end-1c").strip()
+    product_names = [n.strip() for n in re.split(r'[;\n]+', raw_product) if n.strip()]
 
-    if not username or not password or not product_name:
+    if not username or not password or not product_names:
         messagebox.showwarning("提醒", "User Name / Password / Product Name 都要填寫。")
         return
 
@@ -561,6 +587,7 @@ def run_query():
             lbl_result.config(text=f"{msg} ({time.time()-t0:.1f}s)")
             root.update()
 
+        # ── 登入（只做一次）──
         _status("連線 ePrice…")
         driver.get(PRICE_URL)
         time.sleep(0.3)
@@ -580,151 +607,163 @@ def run_query():
             login_button.click()
 
             wait.until(lambda drv: "Login.aspx" not in drv.current_url)
+
+        # ── 依序搜尋每個產品 ──
+        all_products = []
+        query_warnings = []
+        total_queries = len(product_names)
+
+        for q_idx, product_name in enumerate(product_names):
+            want = product_name.strip()
+            if not want:
+                continue
+
+            _status(f"搜尋 ePrice ({q_idx+1}/{total_queries}) - {want}…")
+
             driver.get(PRICE_URL)
+            wait.until(EC.presence_of_element_located(
+                (By.ID, "MainContent_txt_productName")
+            ))
 
-        wait.until(EC.presence_of_element_located(
-            (By.ID, "MainContent_txt_productName")
-        ))
+            pn_input = wait.until(
+                EC.element_to_be_clickable((By.ID, "MainContent_txt_productName"))
+            )
+            driver.execute_script("arguments[0].scrollIntoView(true);", pn_input)
+            time.sleep(0.1)
 
-        pn_input = wait.until(
-            EC.element_to_be_clickable((By.ID, "MainContent_txt_productName"))
-        )
-        driver.execute_script("arguments[0].scrollIntoView(true);", pn_input)
-        time.sleep(0.1)
+            ac = ActionChains(driver)
+            ac.move_to_element(pn_input).click()
+            ac.key_down(Keys.CONTROL).send_keys("a").key_up(Keys.CONTROL)
+            ac.send_keys(want)
+            ac.perform()
+            time.sleep(0.1)
 
-        ac = ActionChains(driver)
-        ac.move_to_element(pn_input).click()
-        ac.key_down(Keys.CONTROL).send_keys("a").key_up(Keys.CONTROL)
-        ac.send_keys(product_name)
-        ac.perform()
-        time.sleep(0.1)
+            driver.execute_script(
+                "var v = arguments[0];"
+                "var inp = document.getElementById('MainContent_txt_productName');"
+                "if(inp){ inp.value = v; inp.setAttribute('value', v);"
+                "inp.dispatchEvent(new Event('input',{bubbles:true})); "
+                "inp.dispatchEvent(new Event('change',{bubbles:true})); }",
+                want,
+            )
+            time.sleep(0.2)
 
-        driver.execute_script(
-            "var v = arguments[0];"
-            "var inp = document.getElementById('MainContent_txt_productName');"
-            "if(inp){ inp.value = v; inp.setAttribute('value', v);"
-            "inp.dispatchEvent(new Event('input',{bubbles:true})); "
-            "inp.dispatchEvent(new Event('change',{bubbles:true})); }",
-            product_name,
-        )
-        time.sleep(0.2)
+            search_btn = wait.until(
+                EC.element_to_be_clickable((By.ID, "MainContent_btn_search"))
+            )
+            _status(f"搜尋 ePrice ({q_idx+1}/{total_queries}) - {want}…")
+            search_btn.click()
 
-        search_btn = wait.until(
-            EC.element_to_be_clickable((By.ID, "MainContent_btn_search"))
-        )
-        _status("搜尋 ePrice…")
-        search_btn.click()
+            wait_long = WebDriverWait(driver, 15)
 
-        wait_long = WebDriverWait(driver, 15)
+            def has_data_row(drv):
+                return drv.execute_script("""
+                    var g = document.getElementById('MainContent_gv');
+                    if (!g) return false;
+                    var rows = g.querySelectorAll('tbody > tr');
+                    for (var i = 0; i < rows.length; i++) {
+                        if (rows[i].querySelectorAll('td').length > 5) return true;
+                    }
+                    return false;
+                """)
 
-        def has_data_row(drv):
-            return drv.execute_script("""
+            try:
+                wait_long.until(has_data_row)
+            except TimeoutException:
+                query_warnings.append(f"「{want}」查無價格資料或查詢逾時")
+                continue
+
+            # 用 JS 一次性提取表頭 + 所有資料列（含 tooltip）
+            raw = driver.execute_script("""
                 var g = document.getElementById('MainContent_gv');
-                if (!g) return false;
+                var ths = g.querySelectorAll('thead tr th');
+                var headers = [];
+                for (var i = 0; i < ths.length; i++) headers.push(ths[i].textContent.trim().toLowerCase());
                 var rows = g.querySelectorAll('tbody > tr');
+                var data = [];
                 for (var i = 0; i < rows.length; i++) {
-                    if (rows[i].querySelectorAll('td').length > 5) return true;
+                    var cells = rows[i].querySelectorAll('td');
+                    var r = [];
+                    for (var j = 0; j < cells.length; j++) {
+                        var obj = {t: cells[j].textContent.trim()};
+                        var sp = cells[j].querySelector('span[title]');
+                        if (sp) obj.title = sp.getAttribute('title') || '';
+                        r.push(obj);
+                    }
+                    data.push(r);
                 }
-                return false;
+                return {headers: headers, rows: data};
             """)
 
-        try:
-            wait_long.until(has_data_row)
-        except TimeoutException:
-            debug_msg = driver.execute_script("""
-                var g = document.getElementById('MainContent_gv');
-                if (!g) return '無法讀取 Grid';
-                var rows = g.querySelectorAll('tbody > tr');
-                var info = [];
-                for (var i = 0; i < rows.length; i++) {
-                    info.push('第'+(i+1)+'列:'+rows[i].querySelectorAll('td').length+'欄');
-                }
-                return 'tbody 共 '+rows.length+' 列。 '+info.join('；');
-            """) or "Grid 不存在"
-            raise Exception("查無產品價格資料或查詢逾時。Debug: " + debug_msg)
+            header_texts = raw["headers"]
+            base_col_index = None
+            quantity_col_index = None
+            currency_col_index = None
+            for i, text in enumerate(header_texts):
+                if "base price" in text or "baseprice" in text:
+                    base_col_index = i
+                if "quantity" in text:
+                    quantity_col_index = i
+                if "currency" in text:
+                    currency_col_index = i
 
-        # 用 JS 一次性提取表頭 + 所有資料列（含 tooltip）
-        raw = driver.execute_script("""
-            var g = document.getElementById('MainContent_gv');
-            var ths = g.querySelectorAll('thead tr th');
-            var headers = [];
-            for (var i = 0; i < ths.length; i++) headers.push(ths[i].textContent.trim().toLowerCase());
-            var rows = g.querySelectorAll('tbody > tr');
-            var data = [];
-            for (var i = 0; i < rows.length; i++) {
-                var cells = rows[i].querySelectorAll('td');
-                var r = [];
-                for (var j = 0; j < cells.length; j++) {
-                    var obj = {t: cells[j].textContent.trim()};
-                    var sp = cells[j].querySelector('span[title]');
-                    if (sp) obj.title = sp.getAttribute('title') || '';
-                    r.push(obj);
-                }
-                data.push(r);
-            }
-            return {headers: headers, rows: data};
-        """)
-
-        header_texts = raw["headers"]
-        base_col_index = None
-        quantity_col_index = None
-        currency_col_index = None
-        for i, text in enumerate(header_texts):
-            if "base price" in text or "baseprice" in text:
-                base_col_index = i
-            if "quantity" in text:
-                quantity_col_index = i
-            if "currency" in text:
-                currency_col_index = i
-
-        if base_col_index is None:
-            raise Exception("在表頭找不到 'Base Price' 欄位，請確認欄位名稱後調整關鍵字。")
-        if quantity_col_index is None:
-            raise Exception("在表頭找不到 'Quantity' 欄位，請確認欄位名稱後調整關鍵字。")
-
-        PRODUCT_COL = 1
-        product_list = []
-        need_cols = max(
-            base_col_index, PRODUCT_COL, quantity_col_index,
-            currency_col_index if currency_col_index is not None else 0,
-        )
-        for row_data in raw["rows"]:
-            if len(row_data) <= need_cols:
+            if base_col_index is None:
+                query_warnings.append(f"「{want}」表頭找不到 Base Price 欄位")
                 continue
-            qty_text = row_data[quantity_col_index]["t"]
-            if qty_text != "1":
+            if quantity_col_index is None:
+                query_warnings.append(f"「{want}」表頭找不到 Quantity 欄位")
                 continue
-            try:
-                pn_ns = row_data[PRODUCT_COL]["t"]
-                matched, before_g = _cell_matches_product(pn_ns, product_name)
-                if not matched:
+
+            PRODUCT_COL = 1
+            product_list = []
+            need_cols = max(
+                base_col_index, PRODUCT_COL, quantity_col_index,
+                currency_col_index if currency_col_index is not None else 0,
+            )
+            for row_data in raw["rows"]:
+                if len(row_data) <= need_cols:
                     continue
-                idx = before_g.find(product_name)
-                prefix = before_g[:idx].rstrip() if idx > 0 else ""
-                if prefix and (" for " in prefix or "kit" in prefix.lower()):
+                qty_text = row_data[quantity_col_index]["t"]
+                if qty_text != "1":
                     continue
-                currency = row_data[currency_col_index]["t"] if currency_col_index is not None else ""
-                bp = row_data[base_col_index]["t"]
+                try:
+                    pn_ns = row_data[PRODUCT_COL]["t"]
+                    matched, before_g = _cell_matches_product(pn_ns, want)
+                    if not matched:
+                        continue
+                    idx = before_g.find(want)
+                    prefix = before_g[:idx].rstrip() if idx > 0 else ""
+                    if prefix and (" for " in prefix or "kit" in prefix.lower()):
+                        continue
+                    currency = row_data[currency_col_index]["t"] if currency_col_index is not None else ""
+                    bp = row_data[base_col_index]["t"]
 
-                cost_lowest = ""
-                title = row_data[base_col_index].get("title", "")
-                if title:
-                    for line in title.splitlines():
-                        if "Cost(Lowest" in line:
-                            _, sep, rest = line.partition("：")
-                            cost_lowest = (rest if sep else line).strip()
-                            break
+                    cost_lowest = ""
+                    title = row_data[base_col_index].get("title", "")
+                    if title:
+                        for line in title.splitlines():
+                            if "Cost(Lowest" in line:
+                                _, sep, rest = line.partition("：")
+                                cost_lowest = (rest if sep else line).strip()
+                                break
 
-                product_list.append((pn_ns, currency, bp, cost_lowest))
-            except Exception:
+                    product_list.append((pn_ns, currency, bp, cost_lowest))
+                except Exception:
+                    continue
+
+            if not product_list:
+                query_warnings.append(f"「{want}」查無符合的價格資料")
                 continue
 
+            # 加入 query_index 和 query_name 到 tuple
+            for pn_ns, currency, bp, cost_lowest in product_list:
+                all_products.append((pn_ns, currency, bp, cost_lowest, [], q_idx, want))
 
         # ── 查詢 anydoor SAP Report 取得 Cost(highest) ──
         unique_pns = list({
-            pn_ns.split("\n")[0].strip()
-            for pn_ns, *_ in product_list
-            if pn_ns.strip()
+            item[0].split("\n")[0].strip()
+            for item in all_products
+            if item[0].strip()
         })
         cost_highest_map = {}
         anydoor_diag = None
@@ -741,25 +780,31 @@ def run_query():
                 )
 
         # 將 Cost(highest) entries 加入 tuple
-        # → (pn_ns, currency, bp, cost_lowest, ch_entries)
-        # ch_entries = [(cost_float, currency_str), ...] — render 時依匯率換算取最大
+        # → (pn_ns, currency, bp, cost_lowest, ch_entries, query_index, query_name)
         product_list_ext = []
-        for pn_ns, currency, bp, cost_lowest in product_list:
+        for pn_ns, currency, bp, cost_lowest, _, q_idx, q_name in all_products:
             pn_key = pn_ns.split("\n")[0].strip()
             ch_entries = cost_highest_map.get(pn_key, [])
             product_list_ext.append(
-                (pn_ns, currency, bp, cost_lowest, ch_entries)
+                (pn_ns, currency, bp, cost_lowest, ch_entries, q_idx, q_name)
             )
 
         elapsed = time.time() - t0
         if not product_list_ext:
             _product_cache = []
             list_result.delete(0, tk.END)
-            list_result.insert(tk.END, "查無產品價格資料。")
+            msg = "所有產品皆查無價格資料。"
+            if query_warnings:
+                msg += "\n" + "\n".join(query_warnings)
+            list_result.insert(tk.END, msg)
             lbl_result.config(text=f"共 0 筆 ({elapsed:.1f}s)")
         else:
             _product_cache = product_list_ext
             _render_results()
+            warn_msg = ""
+            if query_warnings:
+                warn_msg = "\n".join(query_warnings)
+                messagebox.showwarning("部分產品查詢失敗", warn_msg)
             lbl_result.config(
                 text=f"共 {len(_product_cache)} 筆 ({elapsed:.1f}s)"
             )
@@ -785,30 +830,33 @@ tk.Label(root, text="Password:").grid(row=1, column=0, padx=5, pady=5, sticky="e
 entry_pass = tk.Entry(root, width=30, show="*")
 entry_pass.grid(row=1, column=1, padx=5, pady=5)
 
-# Product Name
-tk.Label(root, text="Product Name:").grid(row=2, column=0, padx=5, pady=5, sticky="e")
-entry_product = tk.Entry(root, width=30)
-entry_product.grid(row=2, column=1, padx=5, pady=5)
+# Product Name（多行輸入，每行一個產品）
+tk.Label(root, text="Product Name:").grid(row=2, column=0, padx=5, pady=5, sticky="ne")
+text_product = tk.Text(root, width=30, height=3, font=("TkDefaultFont",))
+text_product.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
+tk.Label(root, text="(每行一個產品名稱，可一次查詢多個)", fg="gray").grid(
+    row=3, column=0, columnspan=2, padx=5, pady=0, sticky="w"
+)
 
-# Selling Price（選填，查詢後可即時修改以重算 E2E%）
-tk.Label(root, text="Selling Price:").grid(row=3, column=0, padx=5, pady=5, sticky="e")
+# Selling Price（多行輸入，每行對應一個產品）
+tk.Label(root, text="Selling Price:").grid(row=4, column=0, padx=5, pady=5, sticky="ne")
 sell_frame = tk.Frame(root)
-sell_frame.grid(row=3, column=1, padx=5, pady=5, sticky="w")
-entry_selling = tk.Entry(sell_frame, width=16)
-entry_selling.pack(side=tk.LEFT)
+sell_frame.grid(row=4, column=1, padx=5, pady=5, sticky="ew")
+text_selling = tk.Text(sell_frame, width=16, height=3, font=("TkDefaultFont",))
+text_selling.pack(side=tk.LEFT, fill=tk.X, expand=True)
 var_sell_currency = tk.StringVar(value="USD")
 currency_menu = ttk.Combobox(
     sell_frame, textvariable=var_sell_currency,
     values=["USD", "NTD", "RMB"], width=6, state="readonly",
 )
-currency_menu.pack(side=tk.LEFT, padx=(4, 0))
-tk.Label(root, text="(選填；修改數字/幣別/匯率即時重算 E2E%，無需重新查詢)", fg="gray").grid(
-    row=4, column=0, columnspan=2, padx=5, pady=0, sticky="w"
+currency_menu.pack(side=tk.LEFT, padx=(4, 0), anchor="n")
+tk.Label(root, text="(選填；每行一個對應產品順序，修改即時重算 E2E%)", fg="gray").grid(
+    row=5, column=0, columnspan=2, padx=5, pady=0, sticky="w"
 )
 
 # 匯率設定
 rate_frame = tk.Frame(root)
-rate_frame.grid(row=5, column=0, columnspan=2, padx=5, pady=4, sticky="w")
+rate_frame.grid(row=6, column=0, columnspan=2, padx=5, pady=4, sticky="w")
 tk.Label(rate_frame, text="匯率：1 USD =").pack(side=tk.LEFT)
 entry_usd_rate = tk.Entry(rate_frame, width=7)
 entry_usd_rate.insert(0, "32")
@@ -820,9 +868,9 @@ entry_rmb_rate.pack(side=tk.LEFT, padx=(2, 4))
 tk.Label(rate_frame, text="NTD　（E2E% 統一以台幣換算）", fg="gray").pack(side=tk.LEFT)
 
 # Cost(Highest) 起始時間
-tk.Label(root, text="Cost(Highest) 起始時間:").grid(row=6, column=0, padx=5, pady=5, sticky="e")
+tk.Label(root, text="Cost(Highest) 起始時間:").grid(row=7, column=0, padx=5, pady=5, sticky="e")
 period_frame = tk.Frame(root)
-period_frame.grid(row=6, column=1, padx=5, pady=5, sticky="w")
+period_frame.grid(row=7, column=1, padx=5, pady=5, sticky="w")
 entry_period_start = tk.Entry(period_frame, width=10)
 entry_period_start.insert(0, "202501")
 entry_period_start.pack(side=tk.LEFT)
@@ -830,19 +878,19 @@ tk.Label(period_frame, text="（格式 YYYYMM，例如 202501）", fg="gray").pa
 
 # 執行按鈕
 btn_run = tk.Button(root, text="查詢 Base Price", command=run_query)
-btn_run.grid(row=7, column=0, columnspan=2, padx=5, pady=10)
+btn_run.grid(row=8, column=0, columnspan=2, padx=5, pady=10)
 
 # 結果：筆數
 lbl_result = tk.Label(root, text="共 0 筆", fg="blue")
-lbl_result.grid(row=8, column=0, columnspan=2, padx=5, pady=2)
+lbl_result.grid(row=9, column=0, columnspan=2, padx=5, pady=2)
 
 # 結果列表
 tk.Label(
     root,
     text="Product Number / Name / Spec | Currency | Base Price | Cost(Lowest) | Cost(Highest) | E2E%：",
-).grid(row=9, column=0, columnspan=2, padx=5, pady=2, sticky="w")
+).grid(row=10, column=0, columnspan=2, padx=5, pady=2, sticky="w")
 list_frame = tk.Frame(root)
-list_frame.grid(row=10, column=0, columnspan=2, padx=5, pady=5, sticky="nsew")
+list_frame.grid(row=11, column=0, columnspan=2, padx=5, pady=5, sticky="nsew")
 scrollbar = tk.Scrollbar(list_frame)
 scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 list_result = tk.Listbox(list_frame, height=12, width=100, yscrollcommand=scrollbar.set, font=("Consolas", 9))
@@ -851,13 +899,13 @@ scrollbar.config(command=list_result.yview)
 
 # 水平捲軸
 scrollbar_h = tk.Scrollbar(root, orient=tk.HORIZONTAL, command=list_result.xview)
-scrollbar_h.grid(row=11, column=0, columnspan=2, sticky="ew", padx=5)
+scrollbar_h.grid(row=12, column=0, columnspan=2, sticky="ew", padx=5)
 list_result.config(xscrollcommand=scrollbar_h.set)
 root.columnconfigure(1, weight=1)
-root.rowconfigure(10, weight=1)
+root.rowconfigure(11, weight=1)
 
 # 即時重算：Selling Price / 幣別 / 匯率改變時，立即更新 E2E（不重新查詢）
-entry_selling.bind("<KeyRelease>", lambda e: _render_results())
+text_selling.bind("<KeyRelease>", lambda e: _render_results())
 var_sell_currency.trace_add("write", lambda *_: _render_results())
 entry_usd_rate.bind("<KeyRelease>", lambda e: _render_results())
 entry_rmb_rate.bind("<KeyRelease>", lambda e: _render_results())

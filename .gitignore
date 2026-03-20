@@ -21,3 +21,6 @@ env/
 
 # Debug
 debug-*.log
+
+# Test reports
+test_reports/

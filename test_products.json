@@ -1,0 +1,520 @@
+{
+  "period_start": "202501",
+  "batch_size": 5,
+  "usd_rate": 32,
+  "rmb_rate": 4.4,
+  "products": [
+    {
+      "name": "Dry Pump Monitoring Solution Kit",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "SDAQ-204",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "SDAQ-204-WT",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "SDAQ/NL-204",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "SDAQ-204/L",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "SDAQ-204-DPM",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "SDAQ-216",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "SDAQ-218",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "PCIe-9852",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "PCIe-9814P",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "PCIe-9834P",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "USB-1902",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "USB-1901",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "USB-1903",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "USB-2401",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "USB-7250",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "USB-7230",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "USB-2405",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "USB-2405/S",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "USB-1210",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "EMU-200L",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "EMU-200",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "EMU-200 with OCPP License",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "EMU-200L-W",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "EMU-200-W",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "EMU-200L-W/NL",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "EMU-210L",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "EMU-210",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "EMU-210 with OCPP License",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6013",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6017",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6018",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6021",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6024",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6050",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6052",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6053",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6054",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6054-HV",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6056",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6058",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6060",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6063",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6510",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6520",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6530",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "PXIe-9848H",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "PXIe-9852",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "PXIe-9908",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "PXIe-9529H",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "PXIe-9834",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "EE-2306AD",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "PCIe-9524",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "Quectel EM05-E Kit",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "4G/LTE Sierra EM7421 Kit for EMU-200",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "4G/LTE Quectel EM05-E Kit for EMU-200",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "4G/LTE Quectel EM05-G Kit for EMU-200",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "4G/LTE Quectel EM05-CE Kit for EMU-200",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "4G/LTE Sierra EM7411 Kit for EMU-200",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6117",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6124",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6160",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6150",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "ND-6151",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "標準產品測試",
+      "expect_found": true,
+      "is_waigoupin": false
+    }
+  ]
+}

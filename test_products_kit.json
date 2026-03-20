@@ -1,0 +1,56 @@
+{
+  "period_start": "202501",
+  "batch_size": 6,
+  "usd_rate": 32,
+  "rmb_rate": 4.4,
+  "products": [
+    {
+      "name": "Quectel EM05-E Kit",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "多字產品名補測",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "4G/LTE Sierra EM7421 Kit for EMU-200",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "多字產品名補測",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "4G/LTE Quectel EM05-E Kit for EMU-200",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "多字產品名補測",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "4G/LTE Quectel EM05-G Kit for EMU-200",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "多字產品名補測",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "4G/LTE Quectel EM05-CE Kit for EMU-200",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "多字產品名補測",
+      "expect_found": true,
+      "is_waigoupin": false
+    },
+    {
+      "name": "4G/LTE Sierra EM7411 Kit for EMU-200",
+      "selling_price": 1000.0,
+      "sell_currency": "USD",
+      "description": "多字產品名補測",
+      "expect_found": true,
+      "is_waigoupin": false
+    }
+  ]
+}
