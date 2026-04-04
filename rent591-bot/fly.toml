@@ -1,0 +1,26 @@
+app = "rent591-line-bot"
+primary_region = "nrt"
+
+[build]
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+
+[mounts]
+  source = "bot_data"
+  destination = "/data"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+
+[checks]
+  [checks.health]
+    type = "http"
+    port = 8080
+    path = "/health"
+    interval = "30s"
+    timeout = "5s"

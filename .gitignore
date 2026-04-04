@@ -24,3 +24,6 @@ debug-*.log
 
 # Test reports
 test_reports/
+
+# LINE Bot
+bot_state.db
